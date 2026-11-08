@@ -297,6 +297,8 @@
   .cbody input[readonly]::placeholder, .tg-title[readonly]::placeholder { color: var(--muted); opacity: 0.6; }
   .cbody .link[readonly]::placeholder { color: transparent; }
   .cbody select:disabled { opacity: 1; color: var(--ink); cursor: default; appearance: none; -webkit-appearance: none; border-color: transparent; background: transparent; padding-left: 6px; }
+  .cbody input[readonly], .tg-title[readonly], .s-unit[readonly], .tg-text[readonly] { pointer-events: none; caret-color: transparent; user-select: none; -webkit-user-select: none; }
+  .site-head { cursor: pointer; }
   .s-unit[readonly] { background: transparent; border-color: transparent; padding-left: 6px; }
   .tg-text[readonly] { min-height: 0; padding: 4px 6px; }
   .srow > .amove { grid-column: 1; grid-row: 1 / 3; }
@@ -1017,6 +1019,7 @@
     if (g.unit) g.unit.id = 'tg-unit-' + id;
     if (g.text) g.text.id = 'tg-text-' + id;
 
+    el.querySelector('.site-head').addEventListener('click', function (e) { if (e.target !== g.caret) g.caret.click(); });
     g.caret.addEventListener('click', function () {
       var willOpen = g.body.hidden;
       if (isU) {
