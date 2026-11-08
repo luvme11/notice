@@ -129,6 +129,7 @@
   }
   .clr:hover { background: var(--danger); }
   .thumb.noimg .pk-t { display: none; }
+  .thumb:not(.noimg) .ph { display: none; }
   .file { position: absolute; width: 1px; height: 1px; opacity: 0; }
   .thumb.busy::after { content: "올리는 중…"; position: absolute; inset: 0; display: grid; place-items: center; background: rgba(20,20,20,0.55); color: #fff; font-size: 0.9rem; }
 
@@ -317,6 +318,12 @@
   }
   .a-clr:hover { background: var(--danger); }
   .add-wrap { margin-top: 4px; }
+  .agrp { display: flex; align-items: center; gap: 6px; padding: 6px 4px; margin-top: 8px; border-bottom: 1px solid var(--line); cursor: pointer; border-radius: 6px 6px 0 0; }
+  .agrp:first-child { margin-top: 0; }
+  .agrp:hover { background: var(--hover); }
+  .agrp-t { font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+  .agrp-n { margin-left: auto; font-size: 0.85rem; color: var(--muted); white-space: nowrap; }
+  .agrp-tools { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
   .icon { overflow: hidden; }
   .icon-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
   .swatches { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -415,6 +422,7 @@
     <section id="pane-chars" role="tabpanel" aria-labelledby="tab-chars" hidden>
       <p class="mnote">사이트, 이름, 사용 모델, 비용, 턴 수, 링크를 여기서 한꺼번에 고치고, 화살표로 같은 사이트 안에서 순서를 바꿉니다. 왼쪽 이미지 칸을 눌러 파일을 올리고, 칸 모서리의 ×로 지웁니다. 캐릭터 추가도 여기서 합니다.</p>
       <p class="ghmsg" id="amsg" role="status" aria-live="polite"></p>
+      <div class="agrp-tools"><button class="tag" type="button" id="a-collapse">모두 접기</button><button class="tag" type="button" id="a-expand">모두 펼치기</button></div>
       <div class="alist" id="alist"></div>
       <div class="empty" id="aempty" hidden>캐릭터가 아직 없습니다.</div>
       <div class="row-btns add-wrap"><button class="btn" type="button" id="c-new">+ 캐릭터 추가</button></div>
@@ -1171,6 +1179,27 @@
     if (focusSiteRow && siteRows[focusSiteRow]) { siteRows[focusSiteRow].name.focus(); focusSiteRow = null; }
   }
 
+  var admCollapsed = {}, adminGroups = {};
+  try { admCollapsed = JSON.parse(localStorage.getItem('adm-collapsed') || '{}') || {}; } catch (e) { admCollapsed = {}; }
+  function saveAdm() { try { localStorage.setItem('adm-collapsed', JSON.stringify(admCollapsed)); } catch (e) {} }
+  function makeAdminGroup(sid) {
+    var el = document.createElement('div');
+    el.className = 'agrp';
+    el.innerHTML = '<button type="button" class="caret" aria-expanded="true" aria-label="접기 또는 펼치기"></button><span class="agrp-t"></span><span class="agrp-n"></span>';
+    var g = { el: el, caret: el.querySelector('.caret'), t: el.querySelector('.agrp-t'), n: el.querySelector('.agrp-n') };
+    el.addEventListener('click', function () {
+      admCollapsed[sid] = !admCollapsed[sid];
+      saveAdm(); syncChars();
+    });
+    return g;
+  }
+  $('a-collapse').addEventListener('click', function () {
+    admCollapsed = { '': true };
+    orderedSites().forEach(function (x) { admCollapsed[x] = true; });
+    saveAdm(); syncChars();
+  });
+  $('a-expand').addEventListener('click', function () { admCollapsed = {}; saveAdm(); syncChars(); });
+
   function makeAdminRow(id) {
     var el = document.createElement('div');
     el.className = 'arow';
@@ -1208,6 +1237,7 @@
     });
     r.site.addEventListener('change', function () {
       if (!chars[id]) return;
+      admCollapsed[r.site.value] = false; saveAdm();
       setField(id, 'siteId', r.site.value);
       layout(); syncAdmin();
     });
@@ -1233,14 +1263,30 @@
   }
   function syncChars() {
     var gm = groupedMembers(), box = $('alist'), flat = [];
+    var seq = [];
     gm.sids.concat(['']).forEach(function (s) {
       var list = gm.members[s];
-      list.forEach(function (id, k) { flat.push({ id: id, s: s, k: k, len: list.length }); });
+      if (s || list.length) seq.push({ g: s, n: list.length });
+      list.forEach(function (id, k) { var f = { id: id, s: s, k: k, len: list.length }; flat.push(f); seq.push({ f: f }); });
+    });
+    var inSeq = {};
+    seq.forEach(function (it) { if (!it.f) inSeq[it.g] = true; });
+    Object.keys(adminGroups).forEach(function (x) {
+      if (!inSeq[x]) { adminGroups[x].el.remove(); delete adminGroups[x]; }
     });
     Object.keys(adminRows).forEach(function (id) {
       if (!chars[id]) { adminRows[id].el.remove(); delete adminRows[id]; }
     });
-    flat.forEach(function (f, i) {
+    seq.forEach(function (item, i) {
+      if (!item.f) {
+        var gp = adminGroups[item.g] || (adminGroups[item.g] = makeAdminGroup(item.g));
+        gp.t.textContent = item.g ? optionLabel(item.g) : '미분류';
+        gp.n.textContent = item.n + '명';
+        gp.caret.setAttribute('aria-expanded', admCollapsed[item.g] ? 'false' : 'true');
+        if (box.children[i] !== gp.el) box.insertBefore(gp.el, box.children[i] || null);
+        return;
+      }
+      var f = item.f;
       var id = f.id, r = adminRows[id] || (adminRows[id] = makeAdminRow(id)), d = chars[id];
       put(r.name, String(d.name == null ? '' : d.name));
       put(r.model, String(d.model == null ? '' : d.model));
@@ -1257,6 +1303,7 @@
       } else { r.pic.removeAttribute('src'); r.pic.hidden = true; r.ph.hidden = false; }
       r.clr.hidden = !img;
       r.up.disabled = f.k === 0; r.dn.disabled = f.k === f.len - 1;
+      r.el.hidden = !!admCollapsed[f.s];
       if (box.children[i] !== r.el) box.insertBefore(r.el, box.children[i] || null);
     });
     $('aempty').hidden = flat.length > 0;
@@ -1270,6 +1317,7 @@
     if (!colRef) return;
     var btn = $('c-new');
     btn.disabled = true;
+    admCollapsed[''] = false; saveAdm();
     colRef.add({ name: '', model: '', link: '', cost: '', turns: '', imageId: '', siteId: '', order: Date.now() }).then(function (ref) {
       focusAdmin = ref.id;
       if (adminRows[ref.id]) { adminRows[ref.id].name.focus(); focusAdmin = null; }
