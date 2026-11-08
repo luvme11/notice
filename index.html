@@ -426,12 +426,15 @@
 
     <section id="pane-sites" role="tabpanel" aria-labelledby="tab-sites">
       <p class="mnote">사이트 이름, 단위(윙, 리프 등), 메모를 여기서 고칩니다. 단위는 카드의 비용과 소계, 최종 사용량에 그대로 쓰입니다. 화살표로 순서를 바꾸고, 사이트를 지우면 안의 캐릭터는 미분류로 옮겨집니다.</p>
-      <h3 class="subh">폴더</h3>
+      <div class="agrp" id="f-sec-head"><button type="button" class="caret" aria-expanded="false" aria-label="폴더 설정 접기 또는 펼치기"></button><span class="agrp-t">폴더</span><span class="agrp-n" id="f-sec-n"></span></div>
+      <div id="f-sec-body" hidden>
       <p class="mnote">사이트를 묶어 두는 폴더입니다. 예: Caveduck, Teapot. 메인 화면에서 폴더 단위로 접고 펼 수 있고, 어느 폴더에 넣을지는 아래 사이트마다 고릅니다.</p>
       <div class="alist" id="flist"></div>
       <div class="row-btns"><button class="btn" type="button" id="f-new" disabled>+ 폴더 추가</button><button class="btn ghost" type="button" id="f-auto">이름 앞 단어로 자동 묶기</button></div>
       <p class="ghmsg" id="f-msg" role="status" aria-live="polite"></p>
+      </div>
       <h3 class="subh">사이트</h3>
+      <div class="agrp-tools"><button class="tag" type="button" id="s-collapse">모두 접기</button><button class="tag" type="button" id="s-expand">모두 펼치기</button></div>
       <div class="alist" id="slist"></div>
       <div class="empty" id="sempty" hidden>아직 사이트가 없습니다. 아래에서 추가하세요.</div>
       <div class="row-btns"><button class="btn" type="button" id="s-new" disabled>+ 사이트 추가</button></div>
@@ -1000,11 +1003,12 @@
   }
 
   function moveSite(id, dir) {
-    var ids = orderedSites(), i = ids.indexOf(id), j = i + dir;
+    var fo = function (x) { var f = tgData[x].folderId; return (f && typeof fData !== 'undefined' && fData[f]) ? f : ''; };
+    var ids = orderedSites().filter(function (x) { return fo(x) === fo(id); }), i = ids.indexOf(id), j = i + dir;
     if (i < 0 || j < 0 || j >= ids.length) return;
-    var vals = ids.map(function (s) { return Number(tgData[s].order) || 0; }).sort(function (a, b) { return a - b; });
+    var vals = ids.map(function (x) { return Number(tgData[x].order) || 0; }).sort(function (a, b) { return a - b; });
     ids.splice(i, 1); ids.splice(j, 0, id);
-    ids.forEach(function (s, k) { if (Number(tgData[s].order) !== vals[k]) tSet(s, 'order', vals[k]); });
+    ids.forEach(function (x, k) { if (Number(tgData[x].order) !== vals[k]) tSet(x, 'order', vals[k]); });
     layout();
     if (!modal.hidden) syncAdmin();
   }
@@ -1017,6 +1021,7 @@
   function addSite(btn, fromModal) {
     if (!tgRef) return;
     btn.disabled = true;
+    if (fromModal) { admCollapsed['s:'] = false; saveAdm(); }
     tgRef.add({ title: '', unit: '', body: '', open: true, order: Date.now() }).then(function (ref) {
       if (fromModal) {
         focusSiteRow = ref.id;
@@ -1259,6 +1264,10 @@
   }
   function syncFolders() {
     var fids = orderedFolders(), box = $('flist');
+    var fOpenSec = admCollapsed['sec:folders'] === false;
+    $('f-sec-body').hidden = !fOpenSec;
+    $('f-sec-head').querySelector('.caret').setAttribute('aria-expanded', fOpenSec ? 'true' : 'false');
+    $('f-sec-n').textContent = fids.length + '개';
     Object.keys(folderRows).forEach(function (id) {
       if (!fData[id]) { folderRows[id].el.remove(); delete folderRows[id]; }
     });
@@ -1295,6 +1304,20 @@
     chain.then(function () { layout(); syncAdmin(); fMsg(names.length + '개 폴더에 사이트 ' + n + '곳을 묶었습니다.'); })
       .catch(function (e) { saveErr(e); fMsg('묶지 못했습니다.', true); })
       .then(function () { btn.disabled = false; });
+  });
+  $('f-sec-head').addEventListener('click', function () {
+    admCollapsed['sec:folders'] = admCollapsed['sec:folders'] === false;
+    saveAdm(); syncFolders();
+  });
+  $('s-collapse').addEventListener('click', function () {
+    admCollapsed['s:'] = true;
+    orderedFolders().forEach(function (f) { admCollapsed['s:' + f] = true; });
+    saveAdm(); syncSites();
+  });
+  $('s-expand').addEventListener('click', function () {
+    admCollapsed['s:'] = false;
+    orderedFolders().forEach(function (f) { admCollapsed['s:' + f] = false; });
+    saveAdm(); syncSites();
   });
   $('f-new').addEventListener('click', function () {
     if (!fRef) return;
@@ -1345,6 +1368,7 @@
     r.folder.id = 'sr-folder-' + id;
     r.folder.addEventListener('change', function () {
       if (!tgData[id]) return;
+      admCollapsed['s:' + r.folder.value] = false; saveAdm();
       tSet(id, 'folderId', r.folder.value);
       layout(); syncSites();
     });
@@ -1381,18 +1405,39 @@
     });
     return r;
   }
+  var siteGroups = {};
+  function siteFolderOf(id) { var f = tgData[id].folderId; return (f && fData[f]) ? f : ''; }
   function syncSites() {
-    var sids = orderedSites(), box = $('slist');
+    var box = $('slist'), seq = [], sids = orderedSites();
+    orderedFolders().concat(['']).forEach(function (f) {
+      var list = sids.filter(function (x) { return siteFolderOf(x) === f; });
+      if (f || list.length) seq.push({ g: f, n: list.length });
+      list.forEach(function (id, k) { seq.push({ id: id, f: f, k: k, len: list.length }); });
+    });
     Object.keys(siteRows).forEach(function (id) {
       if (!tgData[id]) { siteRows[id].el.remove(); delete siteRows[id]; }
     });
-    sids.forEach(function (id, i) {
-      var r = siteRows[id] || (siteRows[id] = makeSiteRow(id)), d = tgData[id];
+    var inSeq = {};
+    seq.forEach(function (it) { if (it.id === undefined) inSeq[it.g] = true; });
+    Object.keys(siteGroups).forEach(function (x) {
+      if (!inSeq[x]) { siteGroups[x].el.remove(); delete siteGroups[x]; }
+    });
+    seq.forEach(function (item, i) {
+      if (item.id === undefined) {
+        var gp = siteGroups[item.g] || (siteGroups[item.g] = makeAdminGroup('s:' + item.g, syncSites, true));
+        gp.t.textContent = item.g ? folderLabel(item.g) : '폴더 없음';
+        gp.n.textContent = item.n + '곳';
+        gp.caret.setAttribute('aria-expanded', admCollapsed['s:' + item.g] === false ? 'true' : 'false');
+        if (box.children[i] !== gp.el) box.insertBefore(gp.el, box.children[i] || null);
+        return;
+      }
+      var id = item.id, r = siteRows[id] || (siteRows[id] = makeSiteRow(id)), d = tgData[id];
       put(r.name, String(d.title == null ? '' : d.title));
       put(r.unit, String(d.unit == null ? '' : d.unit));
       put(r.memo, String(d.body == null ? '' : d.body));
-      fillFolderSelect(r.folder, fData[d.folderId] ? d.folderId : '');
-      r.up.disabled = i === 0; r.dn.disabled = i === sids.length - 1;
+      fillFolderSelect(r.folder, item.f);
+      r.up.disabled = item.k === 0; r.dn.disabled = item.k === item.len - 1;
+      r.el.hidden = admCollapsed['s:' + item.f] !== false;
       if (box.children[i] !== r.el) box.insertBefore(r.el, box.children[i] || null);
     });
     $('sempty').hidden = sids.length > 0;
@@ -1402,14 +1447,15 @@
   var admCollapsed = {}, adminGroups = {};
   try { admCollapsed = JSON.parse(localStorage.getItem('adm-collapsed') || '{}') || {}; } catch (e) { admCollapsed = {}; }
   function saveAdm() { try { localStorage.setItem('adm-collapsed', JSON.stringify(admCollapsed)); } catch (e) {} }
-  function makeAdminGroup(sid) {
+  function makeAdminGroup(sid, sync, defC) {
     var el = document.createElement('div');
     el.className = 'agrp';
     el.innerHTML = '<button type="button" class="caret" aria-expanded="true" aria-label="접기 또는 펼치기"></button><span class="agrp-t"></span><span class="agrp-n"></span>';
     var g = { el: el, caret: el.querySelector('.caret'), t: el.querySelector('.agrp-t'), n: el.querySelector('.agrp-n') };
     el.addEventListener('click', function () {
-      admCollapsed[sid] = !admCollapsed[sid];
-      saveAdm(); syncChars();
+      var cur = admCollapsed[sid] === undefined ? !!defC : admCollapsed[sid];
+      admCollapsed[sid] = !cur;
+      saveAdm(); (sync || syncChars)();
     });
     return g;
   }
