@@ -419,6 +419,7 @@
  "settings": {
   "coverColor": "#fff0f5",
   "iconImage": "img-mw7nh3c6t27o.webp",
-  "siteDesc": ""
+  "siteDesc": "",
+  "siteTitle": ""
  }
 }
