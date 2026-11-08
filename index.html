@@ -302,11 +302,11 @@
   .site-head { cursor: pointer; }
   .s-unit[readonly] { background: transparent; border-color: transparent; padding-left: 6px; }
   .tg-text[readonly] { min-height: 0; padding: 4px 6px; }
-  .srow > .amove { grid-column: 1; grid-row: 1 / 3; }
+  .srow > .amove { grid-column: 1; grid-row: 1 / 4; }
   .srow > .s-name { grid-column: 2; grid-row: 1; }
   .srow > .s-unitin { grid-column: 3; grid-row: 1; }
   .srow > .sdel { grid-column: 4; grid-row: 1; }
-  .srow > .s-memo { grid-column: 2 / -1; grid-row: 2; }
+  .srow > .s-memo { grid-column: 2 / -1; grid-row: 3; }
   .s-memo {
     font: inherit; font-size: 0.9rem; line-height: 1.5; color: var(--ink); background: transparent; border: 1px solid var(--line);
     border-radius: 4px; padding: 6px 8px; min-height: 64px; width: 100%; resize: vertical;
@@ -318,6 +318,17 @@
   }
   .a-clr:hover { background: var(--danger); }
   .add-wrap { margin-top: 4px; }
+  .folder { margin-bottom: 14px; }
+  .folder-head { display: flex; align-items: center; gap: 4px; padding: 6px 6px; border-radius: 6px; background: var(--callout); cursor: pointer; }
+  .folder-head:hover { background: var(--tag-bg); }
+  .folder-title { flex: 1 1 auto; min-width: 0; font-weight: 700; font-size: 1.14rem; overflow-wrap: anywhere; }
+  .folder-body { margin: 6px 0 4px 14px; padding-left: 12px; border-left: 2px solid var(--line); min-width: 0; }
+  .subh { margin: 16px 0 2px; font-size: 1rem; }
+  .frow { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 6px; align-items: center; padding: 6px; border: 1px solid var(--line); border-radius: 8px; }
+  .frow input { font: inherit; font-size: 0.92rem; color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 4px; padding: 5px 8px; min-height: 34px; min-width: 0; width: 100%; }
+  .frow input:focus, .srow select:focus { outline: 2px solid var(--accent); outline-offset: -1px; background: var(--bg); }
+  .srow select { font: inherit; font-size: 0.88rem; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 4px 6px; min-height: 34px; min-width: 0; width: 100%; }
+  .srow > .s-folder { grid-column: 2 / -1; grid-row: 2; }
   .agrp { display: flex; align-items: center; gap: 6px; padding: 6px 4px; margin-top: 8px; border-bottom: 1px solid var(--line); cursor: pointer; border-radius: 6px 6px 0 0; }
   .agrp:first-child { margin-top: 0; }
   .agrp:hover { background: var(--hover); }
@@ -341,8 +352,9 @@
 
   @media (max-width: 700px) {
     .srow { grid-template-columns: auto minmax(0, 1fr) auto; }
-    .srow > .amove { grid-column: 1; grid-row: 1 / 4; }
-    .srow > .s-memo { grid-column: 2 / -1; grid-row: 3; }
+    .srow > .amove { grid-column: 1; grid-row: 1 / 5; }
+    .srow > .s-folder { grid-column: 2 / -1; grid-row: 3; }
+    .srow > .s-memo { grid-column: 2 / -1; grid-row: 4; }
     .srow > .s-name { grid-column: 2 / -1; grid-row: 1; }
     .srow > .s-unitin { grid-column: 2; grid-row: 2; }
     .srow > .sdel { grid-column: 3; grid-row: 2; }
@@ -414,6 +426,12 @@
 
     <section id="pane-sites" role="tabpanel" aria-labelledby="tab-sites">
       <p class="mnote">사이트 이름, 단위(윙, 리프 등), 메모를 여기서 고칩니다. 단위는 카드의 비용과 소계, 최종 사용량에 그대로 쓰입니다. 화살표로 순서를 바꾸고, 사이트를 지우면 안의 캐릭터는 미분류로 옮겨집니다.</p>
+      <h3 class="subh">폴더</h3>
+      <p class="mnote">사이트를 묶어 두는 폴더입니다. 예: Caveduck, Teapot. 메인 화면에서 폴더 단위로 접고 펼 수 있고, 어느 폴더에 넣을지는 아래 사이트마다 고릅니다.</p>
+      <div class="alist" id="flist"></div>
+      <div class="row-btns"><button class="btn" type="button" id="f-new" disabled>+ 폴더 추가</button><button class="btn ghost" type="button" id="f-auto">이름 앞 단어로 자동 묶기</button></div>
+      <p class="ghmsg" id="f-msg" role="status" aria-live="polite"></p>
+      <h3 class="subh">사이트</h3>
       <div class="alist" id="slist"></div>
       <div class="empty" id="sempty" hidden>아직 사이트가 없습니다. 아래에서 추가하세요.</div>
       <div class="row-btns"><button class="btn" type="button" id="s-new" disabled>+ 사이트 추가</button></div>
@@ -837,6 +855,13 @@
     $('count').textContent = n.toLocaleString('ko-KR') + '명';
     $('turns').textContent = fmtNum(turns) + '턴';
 
+    orderedFolders().forEach(function (f) {
+      var fg = fgs[f];
+      if (!fg) return;
+      var ns = 0, nc = 0;
+      Object.keys(tgData).forEach(function (sid) { if (tgData[sid].folderId === f) { ns += 1; nc += per[sid].n; } });
+      fg.meta.textContent = ns + '곳 · ' + nc + '명';
+    });
     Object.keys(per).forEach(function (s) {
       var gr = s ? tgs[s] : ung;
       if (!gr) return;
@@ -850,11 +875,22 @@
     if (!sitesReady || !charsReady || !ung) return;
     var q = $('search').value.trim().toLowerCase();
     var gm = groupedMembers(), sids = gm.sids, box = $('sites');
-    sids.forEach(function (s, i) {
-      var el = tgs[s].el;
-      if (box.children[i] !== el) box.insertBefore(el, box.children[i] || null);
+    var fids = orderedFolders().filter(function (f) { return fgs[f]; });
+    var topNodes = [], inF = {};
+    fids.forEach(function (f) { inF[f] = []; topNodes.push(fgs[f].el); });
+    sids.forEach(function (s) {
+      var f = tgData[s].folderId;
+      if (f && inF[f]) inF[f].push(s);
+      else topNodes.push(tgs[s].el);
     });
-    if (box.lastElementChild !== ung.el) box.appendChild(ung.el);
+    topNodes.push(ung.el);
+    fids.forEach(function (f) {
+      inF[f].forEach(function (s, i) {
+        var el = tgs[s].el, body = fgs[f].body;
+        if (body.children[i] !== el) body.insertBefore(el, body.children[i] || null);
+      });
+    });
+    topNodes.forEach(function (n, i) { if (box.children[i] !== n) box.insertBefore(n, box.children[i] || null); });
 
     var visibleGroups = 0, anyChars = Object.keys(chars).length > 0;
     sids.concat(['']).forEach(function (s, gi) {
@@ -887,7 +923,15 @@
         g.dn.disabled = gi === sids.length - 1;
       }
     });
-    $('empty').hidden = !(loaded && !sids.length && !anyChars);
+    fids.forEach(function (f) {
+      var fg = fgs[f], vis = inF[f].some(function (s) { return !tgs[s].el.hidden; });
+      var fOpen = fData[f].open !== false;
+      var titleHit = !!(q && folderLabel(f).toLowerCase().indexOf(q) >= 0);
+      fg.el.hidden = !!(q && !vis && !titleHit);
+      fg.body.hidden = !(fOpen || (q && vis));
+      fg.caret.setAttribute('aria-expanded', fg.body.hidden ? 'false' : 'true');
+    });
+    $('empty').hidden = !(loaded && !sids.length && !anyChars && !fids.length);
     $('nomatch').hidden = !(loaded && q && (anyChars || sids.length) && !visibleGroups);
     recalc();
   }
@@ -1094,6 +1138,174 @@
   $('tg-add').addEventListener('click', function () { addSite($('tg-add'), false); });
   $('s-new').addEventListener('click', function () { addSite($('s-new'), true); });
 
+  /* ---------- 폴더 (사이트를 묶는 가장 바깥 접이식 묶음) ---------- */
+  var fgs = {}, fData = {}, fRef = null, fPending = {}, fTimers = {}, fInflight = {}, fAgain = {}, folderRows = {};
+  function orderedFolders() {
+    return Object.keys(fData).sort(function (a, b) {
+      return ((Number(fData[a].order) || 0) - (Number(fData[b].order) || 0)) || (a < b ? -1 : 1);
+    });
+  }
+  function folderLabel(id) {
+    var t = fData[id] && String(fData[id].title || '').trim();
+    return t || '이름 없는 폴더';
+  }
+  function fFlush(id) {
+    if (!fRef) return;
+    if (fInflight[id]) { fAgain[id] = true; return; }
+    var patch = Object.assign({}, fPending[id] || {});
+    if (!Object.keys(patch).length) return;
+    fInflight[id] = true;
+    fRef.doc(id).update(patch).then(function () {
+      var p = fPending[id] || {};
+      Object.keys(patch).forEach(function (k) { if (p[k] === patch[k]) delete p[k]; });
+    }).catch(saveErr).then(function () {
+      fInflight[id] = false;
+      if (fAgain[id]) { fAgain[id] = false; fFlush(id); }
+    });
+  }
+  function fSet(id, f, v) {
+    if (!fData[id]) return;
+    fData[id][f] = v;
+    fPending[id] = fPending[id] || {};
+    fPending[id][f] = v;
+    clearTimeout(fTimers[id]);
+    fTimers[id] = setTimeout(function () { fFlush(id); }, 500);
+  }
+  function makeFolder(id) {
+    var el = document.createElement('section');
+    el.className = 'folder';
+    el.innerHTML = '<div class="folder-head"><button type="button" class="caret" aria-expanded="true" aria-label="폴더 접기 또는 펼치기"></button><span class="folder-title"></span><span class="site-meta f-meta"></span></div><div class="folder-body"></div>';
+    var g = { el: el, caret: el.querySelector('.caret'), title: el.querySelector('.folder-title'), meta: el.querySelector('.f-meta'), body: el.querySelector('.folder-body') };
+    el.querySelector('.folder-head').addEventListener('click', function () {
+      if (!fData[id]) return;
+      fSet(id, 'open', fData[id].open === false);
+      layout();
+    });
+    return g;
+  }
+  function onFolders(snap) {
+    var seen = {};
+    snap.docs.forEach(function (d) {
+      seen[d.id] = true;
+      fData[d.id] = Object.assign({}, d.data(), fPending[d.id] || {});
+      if (!fgs[d.id]) fgs[d.id] = makeFolder(d.id);
+      fgs[d.id].title.textContent = folderLabel(d.id);
+    });
+    Object.keys(fgs).forEach(function (id) {
+      if (!seen[id]) {
+        Array.prototype.slice.call(fgs[id].body.children).forEach(function (n) { $('sites').appendChild(n); });
+        fgs[id].el.remove(); delete fgs[id]; delete fData[id];
+      }
+    });
+    $('f-new').disabled = false;
+    layout();
+    if (!modal.hidden) syncAdmin();
+  }
+  function moveFolder(id, dir) {
+    var ids = orderedFolders(), i = ids.indexOf(id), j = i + dir;
+    if (i < 0 || j < 0 || j >= ids.length) return;
+    var vals = ids.map(function (f) { return Number(fData[f].order) || 0; }).sort(function (a, b) { return a - b; });
+    ids.splice(i, 1); ids.splice(j, 0, id);
+    ids.forEach(function (f, k) { if (Number(fData[f].order) !== vals[k]) fSet(f, 'order', vals[k]); });
+    layout(); if (!modal.hidden) syncAdmin();
+  }
+  function deleteFolder(id) {
+    clearTimeout(fTimers[id]); delete fPending[id];
+    Object.keys(tgData).forEach(function (sid) { if (tgData[sid].folderId === id) tSet(sid, 'folderId', ''); });
+    if (fRef) fRef.doc(id).delete().catch(saveErr);
+  }
+  function fillFolderSelect(sel, cur) {
+    var fids = orderedFolders();
+    var sig = fids.map(function (f) { return f + ':' + folderLabel(f); }).join('|');
+    if (sel.getAttribute('data-sig') !== sig) {
+      sel.innerHTML = '';
+      var o0 = document.createElement('option');
+      o0.value = ''; o0.textContent = '폴더 없음'; sel.appendChild(o0);
+      fids.forEach(function (f) {
+        var o = document.createElement('option');
+        o.value = f; o.textContent = folderLabel(f); sel.appendChild(o);
+      });
+      sel.setAttribute('data-sig', sig);
+    }
+    if (sel.value !== cur) sel.value = cur;
+  }
+  function makeFolderRow(id) {
+    var el = document.createElement('div');
+    el.className = 'frow';
+    el.innerHTML = '<div class="amove"><button type="button" class="mv up" aria-label="위로">▲</button><button type="button" class="mv dn" aria-label="아래로">▼</button></div>' +
+      '<input class="f-name" type="text" placeholder="폴더 이름 (예: Caveduck)" aria-label="폴더 이름" autocomplete="off">' +
+      '<button type="button" class="del fdel">삭제</button>';
+    var r = { el: el, up: el.querySelector('.up'), dn: el.querySelector('.dn'), name: el.querySelector('.f-name'), del: el.querySelector('.fdel') };
+    r.name.id = 'fr-name-' + id;
+    r.name.addEventListener('input', function () {
+      if (!fData[id]) return;
+      fSet(id, 'title', r.name.value);
+      if (fgs[id]) fgs[id].title.textContent = folderLabel(id);
+      syncSites();
+    });
+    r.up.addEventListener('click', function () { moveFolder(id, -1); });
+    r.dn.addEventListener('click', function () { moveFolder(id, 1); });
+    var t = null;
+    r.del.addEventListener('click', function () {
+      if (!r.del.classList.contains('arm')) {
+        r.del.classList.add('arm'); r.del.textContent = '한 번 더';
+        t = setTimeout(function () { r.del.classList.remove('arm'); r.del.textContent = '삭제'; }, 3500);
+        return;
+      }
+      clearTimeout(t);
+      deleteFolder(id);
+    });
+    return r;
+  }
+  function syncFolders() {
+    var fids = orderedFolders(), box = $('flist');
+    Object.keys(folderRows).forEach(function (id) {
+      if (!fData[id]) { folderRows[id].el.remove(); delete folderRows[id]; }
+    });
+    fids.forEach(function (id, i) {
+      var r = folderRows[id] || (folderRows[id] = makeFolderRow(id));
+      put(r.name, String(fData[id].title == null ? '' : fData[id].title));
+      r.up.disabled = i === 0; r.dn.disabled = i === fids.length - 1;
+      if (box.children[i] !== r.el) box.insertBefore(r.el, box.children[i] || null);
+    });
+  }
+  function fMsg(t, err) { var m = $('f-msg'); m.textContent = t || ''; m.className = 'ghmsg' + (err ? ' err' : ''); }
+  $('f-auto').addEventListener('click', function () {
+    if (!fRef) return;
+    var groups = {};
+    orderedSites().forEach(function (sid) {
+      var f = tgData[sid].folderId;
+      if (f && fData[f]) return;
+      var t = siteLabel(sid), w = t.split(/\s+/)[0];
+      if (!w || t.indexOf(' ') < 0) return;
+      (groups[w] = groups[w] || []).push(sid);
+    });
+    var names = Object.keys(groups);
+    if (!names.length) { fMsg('묶을 사이트가 없습니다. 이름이 "Caveduck @kit"처럼 띄어쓰기로 시작 단어가 나뉘고, 아직 폴더가 없는 사이트만 대상입니다.'); return; }
+    var btn = $('f-auto'), n = 0;
+    btn.disabled = true; fMsg('묶는 중…');
+    var chain = Promise.resolve();
+    names.forEach(function (name, i) {
+      chain = chain.then(function () {
+        var fid = orderedFolders().filter(function (f) { return folderLabel(f) === name; })[0];
+        var go = fid ? Promise.resolve({ id: fid }) : fRef.add({ title: name, open: true, order: Date.now() + i });
+        return go.then(function (ref) { groups[name].forEach(function (sid) { tSet(sid, 'folderId', ref.id); n += 1; }); });
+      });
+    });
+    chain.then(function () { layout(); syncAdmin(); fMsg(names.length + '개 폴더에 사이트 ' + n + '곳을 묶었습니다.'); })
+      .catch(function (e) { saveErr(e); fMsg('묶지 못했습니다.', true); })
+      .then(function () { btn.disabled = false; });
+  });
+  $('f-new').addEventListener('click', function () {
+    if (!fRef) return;
+    var btn = $('f-new');
+    btn.disabled = true;
+    fRef.add({ title: '', open: true, order: Date.now() }).then(function (ref) {
+      var tryFocus = function () { if (folderRows[ref.id]) folderRows[ref.id].name.focus(); };
+      setTimeout(tryFocus, 0);
+    }).catch(saveErr).then(function () { btn.disabled = false; });
+  });
+
   /* ---------- 설정 창 (사이트 관리 · 캐릭터 관리 · GitHub 토큰) ---------- */
   var GH_KEY = 'gh-token';
 
@@ -1123,12 +1335,19 @@
       '<input class="s-name" type="text" placeholder="사이트 이름 (예: 케이브덕)" aria-label="사이트 이름" autocomplete="off">' +
       '<input class="s-unitin" type="text" list="unit-list" placeholder="단위 (예: 윙)" maxlength="12" aria-label="단위" autocomplete="off">' +
       '<button type="button" class="del sdel">삭제</button>' +
+      '<select class="s-folder" aria-label="폴더"></select>' +
       '<textarea class="s-memo" placeholder="메모 (가격, 이름 부르는 방식 등 이 사이트의 규칙)" aria-label="사이트 메모"></textarea>';
     var r = {
       el: el, up: el.querySelector('.up'), dn: el.querySelector('.dn'),
       name: el.querySelector('.s-name'), unit: el.querySelector('.s-unitin'), del: el.querySelector('.sdel'),
-      memo: el.querySelector('.s-memo')
+      memo: el.querySelector('.s-memo'), folder: el.querySelector('.s-folder')
     };
+    r.folder.id = 'sr-folder-' + id;
+    r.folder.addEventListener('change', function () {
+      if (!tgData[id]) return;
+      tSet(id, 'folderId', r.folder.value);
+      layout(); syncSites();
+    });
     r.name.id = 'sr-name-' + id; r.unit.id = 'sr-unit-' + id; r.memo.id = 'sr-memo-' + id;
     r.memo.addEventListener('input', function () {
       if (!tgData[id]) return;
@@ -1172,6 +1391,7 @@
       put(r.name, String(d.title == null ? '' : d.title));
       put(r.unit, String(d.unit == null ? '' : d.unit));
       put(r.memo, String(d.body == null ? '' : d.body));
+      fillFolderSelect(r.folder, fData[d.folderId] ? d.folderId : '');
       r.up.disabled = i === 0; r.dn.disabled = i === sids.length - 1;
       if (box.children[i] !== r.el) box.insertBefore(r.el, box.children[i] || null);
     });
@@ -1323,7 +1543,7 @@
       if (adminRows[ref.id]) { adminRows[ref.id].name.focus(); focusAdmin = null; }
     }).catch(saveErr).then(function () { btn.disabled = false; });
   });
-  function syncAdmin() { syncSites(); syncChars(); syncLook(); }
+  function syncAdmin() { syncFolders(); syncSites(); syncChars(); syncLook(); }
 
   var GH_REPO = 'gh-repo', GH_BRANCH = 'gh-branch';
   function lsGet(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
@@ -1560,8 +1780,8 @@
   }
 
   var Store = (function () {
-    var data = { characters: {}, toggles: {}, settings: {} }, sha = null, ready = false;
-    var subs = { characters: [], toggles: [], settings: [] };
+    var data = { characters: {}, toggles: {}, settings: {}, folders: {} }, sha = null, ready = false;
+    var subs = { characters: [], toggles: [], settings: [], folders: [] };
     var saveT = null, saving = false, again = false, waiters = [];
 
     function snap(name) {
@@ -1573,7 +1793,7 @@
     function readCache(cfg) {
       try {
         var o = JSON.parse(localStorage.getItem('calc-cache') || 'null');
-        if (o && o.repo === cfg.repo && o.branch === cfg.branch && o.data) return { characters: o.data.characters || {}, toggles: o.data.toggles || {}, settings: o.data.settings || {} };
+        if (o && o.repo === cfg.repo && o.branch === cfg.branch && o.data) return { characters: o.data.characters || {}, toggles: o.data.toggles || {}, settings: o.data.settings || {}, folders: o.data.folders || {} };
       } catch (e) {}
       return null;
     }
@@ -1581,7 +1801,7 @@
       try { localStorage.setItem('calc-cache', JSON.stringify({ repo: cfg.repo, branch: cfg.branch, data: data })); } catch (e) {}
     }
     function emit(name) { subs[name].forEach(function (l) { l.cb(name === 'settings' ? Object.assign({}, data.settings) : snap(name)); }); }
-    function emitAll() { emit('settings'); emit('toggles'); emit('characters'); }
+    function emitAll() { emit('settings'); emit('folders'); emit('toggles'); emit('characters'); }
     function check() {
       var cfg = ghCfg();
       if (!cfg.repo) return Promise.reject(codeErr('no_repo'));
@@ -1691,15 +1911,15 @@
 
     function load() {
       var cfg = ghCfg();
-      data = { characters: {}, toggles: {}, settings: {} }; sha = null;
+      data = { characters: {}, toggles: {}, settings: {}, folders: {} }; sha = null;
       if (!cfg.repo) { ready = true; emitAll(); return Promise.resolve(null); }
       var cc = readCache(cfg);
       if (cc) { data = cc; emitAll(); }
       return fetchData(cfg).then(function (r) {
-        data = { characters: {}, toggles: {}, settings: {} };
+        data = { characters: {}, toggles: {}, settings: {}, folders: {} };
         if (!r.missing) {
           sha = r.sha;
-          try { var j = JSON.parse(r.text || '{}'); data.characters = j.characters || {}; data.toggles = j.toggles || {}; data.settings = j.settings || {}; } catch (e) { throw codeErr('bad_data'); }
+          try { var j = JSON.parse(r.text || '{}'); data.characters = j.characters || {}; data.toggles = j.toggles || {}; data.settings = j.settings || {}; data.folders = j.folders || {}; } catch (e) { throw codeErr('bad_data'); }
         }
         ready = true; writeCache(cfg); emitAll();
         return null;
@@ -1744,6 +1964,8 @@
   (function () {
     colRef = Store.col('characters');
     tgRef = Store.col('toggles');
+    fRef = Store.col('folders');
+    fRef.orderBy('order').onSnapshot(onFolders, function () {});
     assetsNs = Store.assets;
     tgRef.orderBy('order').onSnapshot(onToggles, function () { sitesReady = true; layout(); });
     loadTimer = setTimeout(function () {
