@@ -1,6 +1,14 @@
 {
  "characters": {},
- "toggles": {},
+ "toggles": {
+  "tmw7pdns7e1es": {
+   "title": "",
+   "unit": "",
+   "body": "",
+   "open": true,
+   "order": 1794134535847
+  }
+ },
  "settings": {
   "coverColor": "#fff0f5",
   "iconImage": "img-mw7nh3c6t27o.webp"
