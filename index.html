@@ -73,7 +73,7 @@
     font-family: var(--font-num); font-size: 1.5rem; color: var(--accent); position: relative;
   }
   h1 { font-size: clamp(1.9rem, 6vw, 2.5rem); line-height: 1.2; margin: 18px 0 6px; letter-spacing: -0.02em; text-wrap: balance; }
-  .desc { margin: 0 0 22px; color: var(--muted); max-width: 62ch; }
+  .desc { white-space: pre-line; margin: 0 0 22px; color: var(--muted); max-width: 62ch; }
 
   .tag {
     font: inherit; font-size: 0.86rem; color: var(--ink); background: transparent;
@@ -360,7 +360,7 @@
     <h1 id="page-title">♡</h1>
     <button class="gear" type="button" id="open-admin" aria-haspopup="dialog">⚙ 설정</button>
   </div>
-  <p class="desc">사이트별 캐릭터와 소계를 한눈에 보는 화면입니다. 사이트, 캐릭터, 비용, 턴 수는 오른쪽 위 ⚙ 설정에서 고치면 GitHub 저장소에 자동으로 저장됩니다.</p>
+  <p class="desc" id="page-desc">사이트별 캐릭터와 소계를 한눈에 보는 화면입니다. 사이트, 캐릭터, 비용, 턴 수는 오른쪽 위 ⚙ 설정에서 고치면 GitHub 저장소에 자동으로 저장됩니다.</p>
 
   <section class="callout" aria-label="합계" hidden>
     <div class="mark" aria-hidden="true">Σ</div>
@@ -423,6 +423,12 @@
         <h3>사이트 이름</h3>
         <div class="field"><input type="text" id="site-title-in" maxlength="40" placeholder="♡" autocomplete="off" aria-label="사이트 이름"></div>
         <p class="mnote">맨 위 큰 제목과 브라우저 탭 제목에 쓰입니다. 비워 두면 ♡가 나옵니다.</p>
+      </div>
+      <div class="look-sec">
+        <h3>소개말</h3>
+        <textarea class="s-memo" id="site-desc-in" rows="3" maxlength="300" placeholder="제목 아래에 보일 소개말" aria-label="소개말"></textarea>
+        <div class="row-btns"><button class="btn ghost" type="button" id="desc-reset">기본 문구로</button></div>
+        <p class="mnote">줄바꿈도 그대로 보입니다. 비워 두면 소개말이 나오지 않습니다.</p>
       </div>
       <div class="look-sec">
         <h3>상단 배경 색상</h3>
@@ -1362,12 +1368,15 @@
   });
 
   /* ---------- 화면 설정 (상단 배경색, 아이콘 이미지) ---------- */
-  var settings = {}, DEF_FAV = '', COVER_DEFAULT = '#e3edfc';
+  var settings = {}, DEF_FAV = '', DESC_DEFAULT = '', COVER_DEFAULT = '#e3edfc';
   var COVER_PRESETS = ['#e3edfc', '#fde4ec', '#e3f4e6', '#fdf3d0', '#ece6fb', '#fde8d8', '#d8f0f0', '#e6e6e6'];
+  try { DESC_DEFAULT = $('page-desc').textContent; } catch (e) {}
   try { DEF_FAV = document.querySelector('link[rel="icon"]').href; } catch (e) {}
   function applySettings() {
     var ttl = String(settings.siteTitle || '').trim() || '♡';
     $('page-title').textContent = ttl; document.title = ttl;
+    var dsc = typeof settings.siteDesc === 'string' ? settings.siteDesc : DESC_DEFAULT;
+    $('page-desc').textContent = dsc; $('page-desc').hidden = !dsc.trim();
     var cover = document.querySelector('.cover');
     cover.style.background = settings.coverColor || '';
     var src = settings.iconImage ? imgSrc(settings.iconImage) : '';
@@ -1390,6 +1399,7 @@
   }
   function syncLook() {
     put($('site-title-in'), String(settings.siteTitle || ''));
+    put($('site-desc-in'), typeof settings.siteDesc === 'string' ? settings.siteDesc : DESC_DEFAULT);
     var cur = (settings.coverColor || COVER_DEFAULT).toLowerCase();
     var box = $('swatches');
     if (!box.children.length) {
@@ -1407,6 +1417,11 @@
     if (src) { if (pi.getAttribute('src') !== src) pi.setAttribute('src', src); pi.hidden = false; $('icon-prev-sigma').hidden = true; }
     else { pi.removeAttribute('src'); pi.hidden = true; $('icon-prev-sigma').hidden = false; }
   }
+  $('site-desc-in').addEventListener('input', function () { setLook({ siteDesc: $('site-desc-in').value }); });
+  $('desc-reset').addEventListener('click', function () {
+    $('site-desc-in').value = DESC_DEFAULT;
+    setLook({ siteDesc: DESC_DEFAULT });
+  });
   $('site-title-in').addEventListener('input', function () { setLook({ siteTitle: $('site-title-in').value }); });
   $('cover-color').addEventListener('input', function () { setLook({ coverColor: $('cover-color').value }); });
   $('cover-reset').addEventListener('click', function () { setLook({ coverColor: '' }); });
