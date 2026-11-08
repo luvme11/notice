@@ -1,0 +1,1302 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>턴 비용 계산기</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+  /* Layout: 노션 페이지처럼 제목과 합계 콜아웃 아래에 사이트 토글이 세로로 쌓이고, 각 토글 안에 단위·메모와 가로형 캐릭터 카드가 들어간다. */
+  :root {
+    --bg: #ffffff;
+    --ink: #37352f;
+    --muted: #8a877f;
+    --line: #e9e8e4;
+    --hover: #f5f4f1;
+    --callout: #f1f0ec;
+    --tag-bg: #e8e6e0;
+    --accent: #2f6fde;
+    --accent-soft: #e3edfc;
+    --danger: #c4372c;
+    --font-body: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    --font-num: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #191919;
+      --ink: #e6e5e1;
+      --muted: #8f8d87;
+      --line: #2f2f2f;
+      --hover: #252525;
+      --callout: #252525;
+      --tag-bg: #373737;
+      --accent: #6ea2ff;
+      --accent-soft: #1f2d45;
+      --danger: #ff8a80;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #191919;
+    --ink: #e6e5e1;
+    --muted: #8f8d87;
+    --line: #2f2f2f;
+    --hover: #252525;
+    --callout: #252525;
+    --tag-bg: #373737;
+    --accent: #6ea2ff;
+    --accent-soft: #1f2d45;
+    --danger: #ff8a80;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.6;
+    padding-block: 0 96px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .cover { height: 120px; margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px))) calc(-1 * max(16px, env(safe-area-inset-right, 0px))); background: var(--accent-soft); border-bottom: 1px solid var(--line); }
+  .page { max-width: 980px; margin: 0 auto; }
+  .icon {
+    width: 72px; height: 72px; margin-top: -36px; border-radius: 12px; background: var(--bg);
+    border: 1px solid var(--line); display: grid; place-items: center;
+    font-family: var(--font-num); font-size: 1.5rem; color: var(--accent); position: relative;
+  }
+  h1 { font-size: clamp(1.9rem, 6vw, 2.5rem); line-height: 1.2; margin: 18px 0 6px; letter-spacing: -0.02em; text-wrap: balance; }
+  .desc { margin: 0 0 22px; color: var(--muted); max-width: 62ch; }
+
+  .tag {
+    font: inherit; font-size: 0.86rem; color: var(--ink); background: transparent;
+    border: 1px solid var(--line); border-radius: 4px; padding: 2px 10px; cursor: pointer; min-height: 28px;
+  }
+  .tag:hover { background: var(--hover); }
+  .tag:disabled { opacity: 0.4; cursor: default; }
+
+  .callout { display: flex; gap: 14px; background: var(--callout); border-radius: 6px; padding: 18px; margin-bottom: 30px; }
+  .callout .mark { font-family: var(--font-num); color: var(--accent); font-size: 1.3rem; line-height: 1.3; flex: none; }
+  .callout .body { min-width: 0; flex: 1; }
+  .callout .lab { font-size: 0.85rem; color: var(--muted); }
+  .grand { display: grid; gap: 12px; margin: 4px 0 12px; }
+  .g-main { font-family: var(--font-num); font-weight: 500; font-size: clamp(1.7rem, 6.5vw, 2.4rem); line-height: 1.2; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .g-main .u { font-family: var(--font-body); font-weight: 700; font-size: 0.55em; margin-left: 0.3em; color: var(--accent); }
+  .g-sub { font-size: 0.86rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .facts { display: flex; flex-wrap: wrap; gap: 4px 24px; font-size: 0.9rem; color: var(--muted); margin: 0; }
+  .facts b { font-family: var(--font-num); font-weight: 500; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+  .bar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .bar + .mnote { margin-bottom: 14px; }
+  h2 { font-size: 1.3rem; margin: 0; letter-spacing: -0.01em; }
+  .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .search {
+    font: inherit; font-size: 0.92rem; color: var(--ink); background: var(--hover);
+    border: 1px solid transparent; border-radius: 6px; padding: 6px 10px; min-height: 36px; width: 200px; max-width: 100%;
+  }
+  .search:focus { background: var(--bg); border-color: var(--accent); outline: none; }
+  .btn {
+    font: inherit; font-size: 0.92rem; font-weight: 500; color: var(--bg); background: var(--accent);
+    border: 0; border-radius: 6px; padding: 6px 14px; min-height: 36px; cursor: pointer;
+  }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .notice { margin: 0 0 14px; padding: 10px 12px; border-radius: 6px; background: var(--callout); font-size: 0.9rem; color: var(--muted); }
+  .notice.err { color: var(--danger); }
+  .empty { padding: 40px 16px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: 8px; margin-bottom: 16px; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); gap: 12px; }
+  .card { border: 1px solid var(--line); border-radius: 8px; background: var(--bg); overflow: hidden; min-width: 0; display: flex; flex-direction: row; container-type: inline-size; }
+  .card:hover { background: var(--hover); }
+  .thumb { position: relative; flex: none; width: 140px; min-height: 168px; max-width: 100%; background: var(--callout); border-right: 1px solid var(--line); overflow: hidden; }
+  .thumb .pic { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb .ph { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 4px; color: var(--muted); font-size: 1.6rem; text-align: center; padding: 0 6px; }
+  .thumb .ph span { font-size: 0.8rem; line-height: 1.35; }
+  .pick { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; cursor: pointer; }
+  .pick:focus-within { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .pick .pk-t { margin-bottom: 8px; padding: 5px 12px; border-radius: 4px; background: rgba(20,20,20,0.72); color: #fff; font-size: 0.82rem; }
+  .pick:hover .pk-t, .pick:focus-within .pk-t { background: var(--accent); color: var(--bg); }
+  .thumb.drop { outline: 2px dashed var(--accent); outline-offset: -4px; }
+  .clr {
+    position: absolute; top: 8px; right: 8px; z-index: 2; font: inherit; font-size: 0.78rem; color: #fff;
+    background: rgba(20,20,20,0.72); border: 0; border-radius: 4px; padding: 5px 10px; min-height: 30px; cursor: pointer;
+  }
+  .clr:hover { background: var(--danger); }
+  .thumb.noimg .pk-t { display: none; }
+  .file { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  .thumb.busy::after { content: "올리는 중…"; position: absolute; inset: 0; display: grid; place-items: center; background: rgba(20,20,20,0.55); color: #fff; font-size: 0.9rem; }
+
+  .cbody { flex: 1 1 0; min-width: 0; padding: 10px 12px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; gap: 8px 10px; }
+  .cbody > .name, .cbody > .model, .cbody > .linkrow, .cbody > .cstat, .cbody > .del { grid-column: 1 / -1; }
+  .cbody > .nums { display: contents; }
+  .cbody > .subrow { align-self: end; min-height: 32px; align-items: center; }
+  @container (max-width: 400px) {
+    .thumb { width: 104px; }
+    .cbody > .siterow, .cbody > .subrow { grid-column: 1 / -1; }
+  }
+  .cbody input { font: inherit; color: var(--ink); background: transparent; border: 1px solid transparent; border-radius: 4px; min-width: 0; width: 100%; }
+  .cbody input:hover { border-color: var(--line); }
+  .cbody input:focus { outline: 2px solid var(--accent); outline-offset: -1px; background: var(--bg); }
+  .cbody select, .arow select {
+    font: inherit; font-size: 0.85rem; color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+    border-radius: 4px; padding: 4px 6px; min-height: 32px; min-width: 0; width: 100%; cursor: pointer;
+  }
+  .cbody select:focus, .arow select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .siterow { display: grid; gap: 2px; }
+  .name { font-size: 1.05rem; font-weight: 700; padding: 5px 6px; min-height: 34px; }
+  .model { font-size: 0.9rem; padding: 4px 6px; min-height: 32px; }
+  .linkrow { display: flex; gap: 6px; align-items: center; }
+  .link { font-size: 0.85rem; padding: 4px 6px; min-height: 32px; flex: 1; }
+  .go {
+    flex: 1 1 0; min-width: 0; display: block; font-size: 0.85rem; line-height: 24px; color: var(--accent); text-decoration: underline;
+    padding: 4px 6px; border-radius: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .go:hover { background: var(--accent-soft); }
+  .link-edit {
+    flex: none; font: inherit; font-size: 0.78rem; color: var(--muted); background: transparent; border: 1px solid var(--line);
+    border-radius: 4px; padding: 2px 8px; min-height: 28px; cursor: pointer;
+  }
+  .link-edit:hover { background: var(--hover); color: var(--ink); }
+  .lb { display: block; font-size: 0.75rem; color: var(--muted); padding-left: 6px; }
+  .n { font-family: var(--font-num); font-size: 0.92rem; text-align: right; padding: 5px 6px; min-height: 34px; font-variant-numeric: tabular-nums; }
+  .subrow { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 2px 6px; font-size: 0.85rem; color: var(--muted); }
+  .sub { font-family: var(--font-num); font-weight: 500; font-size: 0.98rem; color: var(--ink); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; text-align: right; }
+  .cstat { font-size: 0.78rem; color: var(--danger); padding-left: 6px; min-height: 0; }
+  .cstat:empty { display: none; }
+  .del {
+    justify-self: end; font: inherit; font-size: 0.8rem; color: var(--muted); background: transparent;
+    border: 0; border-radius: 4px; padding: 4px 8px; min-height: 30px; cursor: pointer;
+  }
+  .del:hover { background: var(--tag-bg); color: var(--danger); }
+  .del.arm { color: var(--danger); font-weight: 700; }
+  .foot { margin-top: 28px; font-size: 0.82rem; color: var(--muted); }
+  button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .caret {
+    font: inherit; font-size: 0.9rem; width: 30px; height: 30px; flex: none; border: 0; background: transparent;
+    color: var(--muted); border-radius: 4px; cursor: pointer; display: grid; place-items: center;
+  }
+  .caret:hover { background: var(--tag-bg); color: var(--ink); }
+  .caret::before { content: "▸"; display: block; transition: transform .15s; }
+  .caret[aria-expanded="true"]::before { transform: rotate(90deg); }
+  .hd { display: flex; align-items: center; gap: 4px; }
+
+  /* 사이트 토글 */
+  .site { margin-bottom: 6px; }
+  .site-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 2px 4px; border-radius: 6px; }
+  .site-head:hover { background: var(--hover); }
+  .tg-title, .site-static {
+    font: inherit; font-size: 1.08rem; font-weight: 700; color: var(--ink); background: transparent;
+    border: 1px solid transparent; border-radius: 4px; padding: 4px 6px; min-height: 34px; flex: 1 1 140px; min-width: 0;
+  }
+  .site-static { display: flex; align-items: center; color: var(--muted); }
+  .tg-title:hover { border-color: var(--line); }
+  .tg-title:focus, .tg-text:focus { outline: 2px solid var(--accent); outline-offset: -1px; background: var(--bg); }
+  .site-meta { flex: none; font-family: var(--font-num); font-size: 0.84rem; color: var(--muted); white-space: nowrap; padding: 0 8px; font-variant-numeric: tabular-nums; }
+  .site-meta b { color: var(--ink); font-weight: 500; }
+  .site-body { margin: 4px 0 20px 14px; padding: 6px 0 4px 16px; border-left: 2px solid var(--line); display: grid; gap: 14px; min-width: 0; }
+  .unitrow { display: grid; gap: 2px; width: min(100%, 220px); }
+  .s-unit, .srow input, .arow input {
+    font: inherit; font-size: 0.92rem; color: var(--ink); background: transparent; border: 1px solid var(--line);
+    border-radius: 4px; padding: 5px 8px; min-height: 34px; min-width: 0; width: 100%;
+  }
+  .s-unit:focus, .srow input:focus, .arow input:focus { outline: 2px solid var(--accent); outline-offset: -1px; background: var(--bg); }
+  .tg-text {
+    width: 100%; resize: none; overflow: hidden; font: inherit; font-size: 0.95rem; line-height: 1.65; color: var(--ink);
+    background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 6px 8px; min-height: 84px;
+  }
+  .tg-text:hover { border-color: var(--line); }
+  .site-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .site-actions .del { margin-left: auto; }
+
+  .titlerow { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .gear {
+    flex: none;
+    font: inherit; font-size: 0.9rem; font-weight: 500; color: var(--ink); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 6px; padding: 6px 14px; min-height: 36px; cursor: pointer;
+  }
+  .gear:hover { background: var(--hover); }
+  .btn.ghost { background: var(--tag-bg); color: var(--ink); }
+  .btn.ghost:hover { background: var(--accent-soft); color: var(--accent); }
+
+  .modal {
+    position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,0.45); display: grid; place-items: center;
+    padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  }
+  .mbox {
+    background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 10px;
+    width: 100%; max-width: 860px; max-height: 88vh; overflow: auto; padding: 18px; display: grid; gap: 14px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+  }
+  .mhead { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .mtabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--line); }
+  .mtabs button {
+    font: inherit; font-size: 0.92rem; color: var(--muted); background: transparent; border: 0;
+    border-bottom: 2px solid transparent; padding: 8px 12px; min-height: 40px; cursor: pointer;
+  }
+  .mtabs button[aria-selected="true"] { color: var(--ink); font-weight: 700; border-bottom-color: var(--accent); }
+  .mnote { margin: 0; font-size: 0.85rem; color: var(--muted); }
+  .alist { display: grid; gap: 8px; margin: 12px 0; }
+
+  .srow {
+    display: grid; grid-template-columns: auto minmax(0, 1.6fr) minmax(0, 1fr) auto;
+    gap: 6px; align-items: center; padding: 6px; border: 1px solid var(--line); border-radius: 8px;
+  }
+  .arow {
+    display: grid; grid-template-columns: auto 44px minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(0, 1fr) auto;
+    gap: 6px; align-items: center; padding: 6px; border: 1px solid var(--line); border-radius: 8px;
+  }
+  .arow > .amove { grid-column: 1; grid-row: 1 / 3; }
+  .arow > .athumb-wrap { grid-column: 2; grid-row: 1 / 3; }
+  .arow > .a-name { grid-column: 3; grid-row: 1; }
+  .arow > .a-model { grid-column: 4; grid-row: 1; }
+  .arow > .a-site { grid-column: 5; grid-row: 1; }
+  .arow > .adel { grid-column: 6; grid-row: 1; }
+  .arow > .a-cost { grid-column: 3; grid-row: 2; }
+  .arow > .a-turns { grid-column: 4; grid-row: 2; }
+  .arow > .a-link { grid-column: 5 / 7; grid-row: 2; }
+  .arow input.n { font-family: var(--font-num); text-align: right; }
+  .amove { display: grid; gap: 2px; }
+  .mv {
+    font: inherit; font-size: 0.7rem; line-height: 1; color: var(--muted); background: var(--hover);
+    border: 0; border-radius: 4px; width: 28px; height: 22px; cursor: pointer;
+  }
+  .mv:hover { color: var(--accent); }
+  .mv:disabled { opacity: 0.35; cursor: default; }
+  .athumb-wrap {
+    position: relative; width: 44px; height: 55px; border-radius: 4px; overflow: hidden; background: var(--callout);
+    border: 1px dashed var(--line); display: grid; place-items: center; color: var(--muted); cursor: pointer;
+  }
+  .athumb-wrap:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .athumb-wrap:hover { border-color: var(--accent); color: var(--accent); }
+  .athumb { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+  .athumb-ph { font-size: 1.2rem; line-height: 1; }
+  .a-file { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  .field { display: grid; gap: 6px; }
+  .field label { font-size: 0.85rem; color: var(--muted); }
+  .field input {
+    font-family: var(--font-num); font-size: 0.95rem; color: var(--ink); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; min-height: 40px; width: 100%;
+  }
+  .field input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .row-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+  .ghmsg { font-size: 0.88rem; min-height: 1.4em; margin: 0; }
+  .ghmsg.err { color: var(--danger); }
+
+  /* 메인 화면은 보기 전용: 수정 도구는 숨기고 입력칸은 글자처럼 보이게 한다. 고치는 일은 ⚙ 설정에서만 한다. */
+  .card .pick, .card .clr, .card .link-edit, .card .del, .site-actions, #tg-add { display: none !important; }
+  .cbody input[readonly], .tg-title[readonly], .s-unit[readonly], .tg-text[readonly] { cursor: default; }
+  .cbody input[readonly]:hover, .tg-title[readonly]:hover, .tg-text[readonly]:hover { border-color: transparent; }
+  .cbody input[readonly]:focus, .tg-title[readonly]:focus, .tg-text[readonly]:focus { outline: none; background: transparent; }
+  .cbody input[readonly]::placeholder, .tg-title[readonly]::placeholder { color: var(--muted); opacity: 0.6; }
+  .cbody .link[readonly]::placeholder { color: transparent; }
+  .cbody select:disabled { opacity: 1; color: var(--ink); cursor: default; appearance: none; -webkit-appearance: none; border-color: transparent; background: transparent; padding-left: 6px; }
+  .s-unit[readonly] { background: transparent; border-color: transparent; padding-left: 6px; }
+  .tg-text[readonly] { min-height: 0; padding: 4px 6px; }
+  .srow > .amove { grid-column: 1; grid-row: 1 / 3; }
+  .srow > .s-name { grid-column: 2; grid-row: 1; }
+  .srow > .s-unitin { grid-column: 3; grid-row: 1; }
+  .srow > .sdel { grid-column: 4; grid-row: 1; }
+  .srow > .s-memo { grid-column: 2 / -1; grid-row: 2; }
+  .s-memo {
+    font: inherit; font-size: 0.9rem; line-height: 1.5; color: var(--ink); background: transparent; border: 1px solid var(--line);
+    border-radius: 4px; padding: 6px 8px; min-height: 64px; width: 100%; resize: vertical;
+  }
+  .s-memo:focus { outline: 2px solid var(--accent); outline-offset: -1px; background: var(--bg); }
+  .a-clr {
+    position: absolute; top: 2px; right: 2px; z-index: 2; width: 18px; height: 18px; padding: 0; font: inherit; font-size: 0.7rem; line-height: 1;
+    color: #fff; background: rgba(20,20,20,0.72); border: 0; border-radius: 50%; cursor: pointer;
+  }
+  .a-clr:hover { background: var(--danger); }
+  .add-wrap { margin-top: 4px; }
+
+  @media (max-width: 700px) {
+    .srow { grid-template-columns: auto minmax(0, 1fr) auto; }
+    .srow > .amove { grid-column: 1; grid-row: 1 / 4; }
+    .srow > .s-memo { grid-column: 2 / -1; grid-row: 3; }
+    .srow > .s-name { grid-column: 2 / -1; grid-row: 1; }
+    .srow > .s-unitin { grid-column: 2; grid-row: 2; }
+    .srow > .sdel { grid-column: 3; grid-row: 2; }
+    .arow { grid-template-columns: auto 44px minmax(0, 1fr) minmax(0, 1fr); }
+    .arow > .amove, .arow > .athumb-wrap { grid-row: 1 / span 6; }
+    .arow > .a-name, .arow > .a-model, .arow > .a-site, .arow > .a-link { grid-column: 3 / -1; grid-row: auto; }
+    .arow > .a-cost { grid-column: 3; grid-row: auto; }
+    .arow > .a-turns { grid-column: 4; grid-row: auto; }
+    .arow > .adel { grid-column: 3 / -1; grid-row: auto; justify-self: end; }
+  }
+  @media (max-width: 520px) {
+    .cover { height: 84px; }
+    .search { width: 100%; }
+    .site-body { margin-left: 6px; padding-left: 10px; }
+  }
+</style>
+
+<datalist id="unit-list"><option value="윙"></option><option value="리프"></option></datalist>
+
+<div class="cover" aria-hidden="true"></div>
+<main class="page">
+  <div class="icon" aria-hidden="true">Σ</div>
+  <div class="titlerow">
+    <h1>턴 비용 계산기</h1>
+    <button class="gear" type="button" id="open-admin" aria-haspopup="dialog">⚙ 설정</button>
+  </div>
+  <p class="desc">사이트별 캐릭터와 소계를 한눈에 보는 화면입니다. 사이트, 캐릭터, 비용, 턴 수는 오른쪽 위 ⚙ 설정에서 고치면 자동으로 저장됩니다.</p>
+
+  <section class="callout" aria-label="합계" hidden>
+    <div class="mark" aria-hidden="true">Σ</div>
+    <div class="body">
+      <div class="lab">최종 사용량</div>
+      <div class="grand" id="grand"></div>
+      <p class="facts">
+        <span>사이트 <b id="sitecount">0곳</b></span>
+        <span>캐릭터 <b id="count">0명</b></span>
+        <span>총 턴 수 <b id="turns">0턴</b></span>
+      </p>
+    </div>
+  </section>
+
+  <div class="bar">
+    <div class="hd"><h2>사이트</h2></div>
+    <div class="tools">
+      <input class="search" type="text" id="search" placeholder="캐릭터 이름으로 찾기" aria-label="캐릭터 이름으로 찾기" autocomplete="off">
+      <button class="btn" type="button" id="tg-add" disabled>+ 사이트 추가</button>
+    </div>
+  </div>
+  <p class="notice" id="status" role="status" aria-live="polite">저장된 내용을 불러오는 중입니다…</p>
+  <div class="empty" id="empty" hidden>아직 사이트가 없습니다. ⚙ 설정에서 사이트를 추가하고 단위(윙, 리프 등)를 정해 보세요.</div>
+  <div class="empty" id="nomatch" hidden>찾는 이름의 캐릭터가 없습니다.</div>
+  <div id="sites"></div>
+  <p class="foot">수정은 ⚙ 설정에서만 할 수 있습니다. 이미지는 PNG, JPG, WEBP, GIF 파일을 올릴 수 있고, 올릴 때 긴 쪽 900px 이하로 줄여서 저장합니다.</p>
+</main>
+
+<div class="modal" id="modal" hidden>
+  <div class="mbox" role="dialog" aria-modal="true" aria-labelledby="m-title">
+    <div class="mhead">
+      <h2 id="m-title">설정</h2>
+      <button class="btn ghost" type="button" id="m-close">닫기</button>
+    </div>
+    <div class="mtabs" role="tablist" aria-label="설정 메뉴">
+      <button type="button" role="tab" id="tab-sites" aria-selected="true" aria-controls="pane-sites">사이트 관리</button>
+      <button type="button" role="tab" id="tab-chars" aria-selected="false" aria-controls="pane-chars">캐릭터 관리</button>
+      <button type="button" role="tab" id="tab-gh" aria-selected="false" aria-controls="pane-gh">GitHub 토큰</button>
+    </div>
+
+    <section id="pane-sites" role="tabpanel" aria-labelledby="tab-sites">
+      <p class="mnote">사이트 이름, 단위(윙, 리프 등), 메모를 여기서 고칩니다. 단위는 카드의 비용과 소계, 최종 사용량에 그대로 쓰입니다. 화살표로 순서를 바꾸고, 사이트를 지우면 안의 캐릭터는 미분류로 옮겨집니다.</p>
+      <div class="alist" id="slist"></div>
+      <div class="empty" id="sempty" hidden>아직 사이트가 없습니다. 아래에서 추가하세요.</div>
+      <div class="row-btns"><button class="btn" type="button" id="s-new" disabled>+ 사이트 추가</button></div>
+    </section>
+
+    <section id="pane-chars" role="tabpanel" aria-labelledby="tab-chars" hidden>
+      <p class="mnote">사이트, 이름, 사용 모델, 비용, 턴 수, 링크를 여기서 한꺼번에 고치고, 화살표로 같은 사이트 안에서 순서를 바꿉니다. 왼쪽 이미지 칸을 눌러 파일을 올리고, 칸 모서리의 ×로 지웁니다. 캐릭터 추가도 여기서 합니다.</p>
+      <p class="ghmsg" id="amsg" role="status" aria-live="polite"></p>
+      <div class="alist" id="alist"></div>
+      <div class="empty" id="aempty" hidden>캐릭터가 아직 없습니다.</div>
+      <div class="row-btns add-wrap"><button class="btn" type="button" id="c-new">+ 캐릭터 추가</button></div>
+    </section>
+
+    <section id="pane-gh" role="tabpanel" aria-labelledby="tab-gh" hidden>
+      <div class="field">
+        <label for="gh-token">GitHub 토큰</label>
+        <input type="password" id="gh-token" autocomplete="off" spellcheck="false" placeholder="ghp_… 또는 github_pat_…">
+      </div>
+      <p class="ghmsg" id="gh-state" role="status" aria-live="polite"></p>
+      <div class="row-btns">
+        <button class="btn" type="button" id="gh-save">저장</button>
+        <button class="btn ghost" type="button" id="gh-show">보기</button>
+        <button class="btn ghost" type="button" id="gh-clear">지우기</button>
+      </div>
+      <p class="mnote">토큰은 이 브라우저 안에만 저장되고, 다른 사람이나 다른 기기에는 공유되지 않습니다. 이 페이지는 GitHub 같은 바깥 서버로 요청을 보낼 수 없어서, 저장해 두어도 지금은 어디에도 쓰이지 않습니다.</p>
+    </section>
+  </div>
+</div>
+
+<script>
+  var chars = {}, cards = {};
+  var pending = {}, timers = {}, inflight = {}, again = {};
+  var colRef = null, tgRef = null, assetsNs = null;
+  var loaded = false, focusNew = null, focusSite = null, focusSiteRow = null, loadTimer = null;
+  var charsReady = false, sitesReady = false;
+  var tgs = {}, tgData = {};
+  var tPending = {}, tTimers = {}, tInflight = {}, tAgain = {};
+  var ung = null, ungOpen = true;
+  var adminRows = {}, siteRows = {}, lastFocus = null, focusAdmin = null;
+
+  var $ = function (id) { return document.getElementById(id); };
+  var statusEl = $('status'), modal = $('modal');
+
+  function num(s) {
+    var n = parseFloat(String(s == null ? '' : s).replace(/[^0-9.\-]/g, ''));
+    return isFinite(n) && n > 0 ? n : 0;
+  }
+  function fmtNum(n) { return (Math.round(n * 100) / 100).toLocaleString('ko-KR', { maximumFractionDigits: 2 }); }
+  function fmt(n, unit) { return fmtNum(n) + (unit || ''); }
+  function cleanLink(s) {
+    s = String(s || '').trim();
+    if (!s) return '';
+    if (!/^[a-z][a-z0-9+.\-]*:/i.test(s)) s = 'https://' + s;
+    try {
+      var u = new URL(s);
+      if (u.protocol !== 'https:' && u.protocol !== 'http:') return '';
+      if (u.hostname.indexOf('.') < 0) return '';
+      return u.href;
+    } catch (e) { return ''; }
+  }
+  function put(input, v) { if (document.activeElement !== input && input.value !== v) input.value = v; }
+  function autosize(ta) {
+    ta.style.height = 'auto';
+    ta.style.height = Math.max(32, ta.scrollHeight) + 'px';
+  }
+  function setStatus(msg, isErr) {
+    statusEl.textContent = msg || '';
+    statusEl.hidden = !msg;
+    statusEl.className = 'notice' + (isErr ? ' err' : '');
+  }
+  function saveErr(e) {
+    var c = e && e.code;
+    if (c === 'invalid_argument') setStatus('이 화면에서는 저장할 수 없습니다. 페이지 주인 계정으로 열어 주세요.', true);
+    else if (c === 'quota_exceeded') setStatus('저장 공간이 가득 차서 더 저장할 수 없습니다.', true);
+    else setStatus('저장하지 못했습니다. 잠시 뒤 다시 입력해 주세요.', true);
+  }
+
+  /* ---------- 캐릭터 저장 (입력이 멈추면 한 번에 쓰기) ---------- */
+  function queueSave(id, field, value) {
+    pending[id] = pending[id] || {};
+    pending[id][field] = value;
+    clearTimeout(timers[id]);
+    timers[id] = setTimeout(function () { flush(id); }, 500);
+  }
+  function flush(id) {
+    if (!colRef) return;
+    if (inflight[id]) { again[id] = true; return; }
+    var patch = Object.assign({}, pending[id] || {});
+    if (!Object.keys(patch).length) return;
+    inflight[id] = true;
+    colRef.doc(id).update(patch).then(function () {
+      var p = pending[id] || {};
+      Object.keys(patch).forEach(function (k) { if (p[k] === patch[k]) delete p[k]; });
+    }).catch(saveErr).then(function () {
+      inflight[id] = false;
+      if (again[id]) { again[id] = false; flush(id); }
+    });
+  }
+  function setField(id, field, value) {
+    if (!chars[id]) return;
+    chars[id][field] = value;
+    queueSave(id, field, value);
+  }
+
+  /* ---------- 사이트 데이터 헬퍼 ---------- */
+  function orderedSites() {
+    return Object.keys(tgData).sort(function (a, b) {
+      return ((Number(tgData[a].order) || 0) - (Number(tgData[b].order) || 0)) || (a < b ? -1 : 1);
+    });
+  }
+  function orderedIds() {
+    return Object.keys(chars).sort(function (a, b) {
+      return ((Number(chars[a].order) || 0) - (Number(chars[b].order) || 0)) || (a < b ? -1 : 1);
+    });
+  }
+  function siteLabel(id) {
+    var t = tgData[id] && String(tgData[id].title || '').trim();
+    return t || '이름 없는 사이트';
+  }
+  function unitOf(s) {
+    return (s && tgData[s]) ? String(tgData[s].unit == null ? '' : tgData[s].unit).trim() : '';
+  }
+  function optionLabel(s) { return siteLabel(s) + (unitOf(s) ? ' (' + unitOf(s) + ')' : ''); }
+  function groupOf(d) {
+    var s = d && d.siteId;
+    return (s && tgData[s]) ? s : '';
+  }
+  function groupedMembers() {
+    var sids = orderedSites(), members = { '': [] };
+    sids.forEach(function (s) { members[s] = []; });
+    orderedIds().forEach(function (id) { members[groupOf(chars[id])].push(id); });
+    return { sids: sids, members: members };
+  }
+  function fillSiteSelect(sel, cur) {
+    var sids = orderedSites();
+    var sig = sids.map(function (s) { return s + ':' + optionLabel(s); }).join('|');
+    if (sel.getAttribute('data-sig') !== sig) {
+      sel.innerHTML = '';
+      var o0 = document.createElement('option');
+      o0.value = ''; o0.textContent = '미분류'; sel.appendChild(o0);
+      sids.forEach(function (s) {
+        var o = document.createElement('option');
+        o.value = s; o.textContent = optionLabel(s); sel.appendChild(o);
+      });
+      sel.setAttribute('data-sig', sig);
+    }
+    if (sel.value !== cur) sel.value = cur;
+  }
+  function costLabel(unit) { return '한 턴 비용' + (unit ? ' (' + unit + ')' : ''); }
+
+  /* ---------- 카드 ---------- */
+  function makeCard(id) {
+    var el = document.createElement('article');
+    el.className = 'card';
+    el.innerHTML =
+      '<div class="thumb noimg"><img class="pic" alt="" hidden>' +
+      '<div class="ph" aria-hidden="true"><span>이미지<br>없음</span></div>' +
+      '<label class="pick"><span class="pk-t">이미지 변경</span>' +
+      '<input class="file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" aria-label="캐릭터 이미지 파일 올리기"></label>' +
+      '<button type="button" class="clr" hidden aria-label="이미지 지우기">지우기</button></div>' +
+      '<div class="cbody">' +
+      '<input class="name" type="text" placeholder="캐릭터 이름" aria-label="캐릭터 이름" autocomplete="off">' +
+      '<input class="model" type="text" placeholder="사용 모델 (예: Opus 4.5)" aria-label="사용 모델" autocomplete="off">' +
+      '<div class="linkrow"><input class="link" type="text" placeholder="링크 붙여넣기" aria-label="링크" inputmode="url" autocomplete="off">' +
+      '<a class="go" hidden target="_blank" rel="noopener noreferrer"></a>' +
+      '<button type="button" class="link-edit" hidden aria-label="링크 수정">수정</button></div>' +
+      '<div class="nums"><div><span class="lb c-lb"></span><input class="n cost" type="text" inputmode="decimal" placeholder="0" aria-label="한 턴 비용" autocomplete="off"></div>' +
+      '<div><span class="lb">턴 수</span><input class="n turns" type="text" inputmode="numeric" placeholder="0" aria-label="턴 수" autocomplete="off"></div></div>' +
+      '<div class="siterow"><span class="lb">사이트</span><select class="site-sel" aria-label="사이트 선택"></select></div>' +
+      '<div class="subrow"><span>소계</span><b class="sub">0</b></div>' +
+      '<button type="button" class="del">삭제</button>' +
+      '<div class="cstat" aria-live="polite"></div></div>';
+
+    var c = {
+      el: el,
+      thumb: el.querySelector('.thumb'),
+      pic: el.querySelector('.pic'),
+      file: el.querySelector('.file'),
+      clr: el.querySelector('.clr'),
+      name: el.querySelector('.name'),
+      model: el.querySelector('.model'),
+      site: el.querySelector('.site-sel'),
+      link: el.querySelector('.link'),
+      go: el.querySelector('.go'),
+      edit: el.querySelector('.link-edit'),
+      cost: el.querySelector('.cost'),
+      turns: el.querySelector('.turns'),
+      lb: el.querySelector('.c-lb'),
+      sub: el.querySelector('.sub'),
+      stat: el.querySelector('.cstat'),
+      del: el.querySelector('.del'),
+      imageId: ''
+    };
+    c.name.id = 'name-' + id; c.model.id = 'model-' + id; c.link.id = 'link-' + id; c.cost.id = 'cost-' + id;
+    c.turns.id = 'turns-' + id; c.file.id = 'file-' + id; c.site.id = 'site-' + id;
+    /* 메인 화면은 보기 전용 */
+    [c.name, c.model, c.link, c.cost, c.turns].forEach(function (x) { x.readOnly = true; x.tabIndex = -1; });
+    c.link.tabIndex = 0;
+    c.site.disabled = true;
+
+    c.name.addEventListener('input', function () { setField(id, 'name', c.name.value); layout(); });
+    c.model.addEventListener('input', function () { setField(id, 'model', c.model.value); if (!modal.hidden) syncAdmin(); });
+    c.site.addEventListener('change', function () {
+      setField(id, 'siteId', c.site.value);
+      layout();
+      if (!modal.hidden) syncAdmin();
+    });
+    c.link.addEventListener('input', function () { setField(id, 'link', c.link.value); });
+    c.link.addEventListener('blur', function () { c.link.removeAttribute('data-edit'); showGo(c); });
+    c.link.addEventListener('keydown', function (e) { if (e.key === 'Enter') c.link.blur(); });
+    c.edit.addEventListener('click', function () {
+      c.link.setAttribute('data-edit', '1');
+      showGo(c);
+      c.link.focus();
+    });
+    c.cost.addEventListener('input', function () { setField(id, 'cost', c.cost.value); recalc(); });
+    c.turns.addEventListener('input', function () { setField(id, 'turns', c.turns.value); recalc(); });
+    c.pic.addEventListener('error', function () { c.pic.hidden = true; c.thumb.classList.add('noimg'); });
+
+    var armTimer = null;
+    c.del.addEventListener('click', function () {
+      if (!c.del.classList.contains('arm')) {
+        c.del.classList.add('arm'); c.del.textContent = '한 번 더 누르면 삭제';
+        armTimer = setTimeout(function () { c.del.classList.remove('arm'); c.del.textContent = '삭제'; }, 3500);
+        return;
+      }
+      clearTimeout(armTimer);
+      removeChar(id);
+    });
+    c.file.addEventListener('change', function () {
+      var f = c.file.files && c.file.files[0];
+      c.file.value = '';
+      if (f) uploadImage(id, c, f);
+    });
+    c.clr.addEventListener('click', function () { removeImage(id, c); });
+    return c;
+  }
+
+  function showGo(c) {
+    var href = cleanLink(c.link.value);
+    var editing = c.link.getAttribute('data-edit') === '1' || document.activeElement === c.link;
+    if (href && !editing) {
+      c.go.setAttribute('href', href);
+      c.go.textContent = c.link.value.trim().replace(/^https?:\/\//i, '');
+      c.go.hidden = false; c.edit.hidden = false; c.link.hidden = true;
+    } else {
+      c.go.removeAttribute('href'); c.go.hidden = true; c.edit.hidden = true; c.link.hidden = false;
+    }
+  }
+  function removeImage(id, c) {
+    if (!colRef || !c.imageId) return;
+    var old = c.imageId;
+    colRef.doc(id).update({ imageId: '' }).then(function () {
+      if (chars[id]) chars[id].imageId = '';
+      showImage(c, '');
+      if (!modal.hidden) syncAdmin();
+      if (assetsNs) assetsNs.delete(old).catch(function () {});
+    }).catch(saveErr);
+  }
+  function showImage(c, imageId) {
+    c.imageId = imageId || '';
+    c.clr.hidden = !c.imageId;
+    if (c.imageId) {
+      var src = '/_blob/' + c.imageId;
+      if (c.pic.getAttribute('src') !== src) c.pic.setAttribute('src', src);
+      c.pic.hidden = false; c.thumb.classList.remove('noimg');
+    } else {
+      c.pic.removeAttribute('src'); c.pic.hidden = true; c.thumb.classList.add('noimg');
+    }
+  }
+  function fillCard(c, d) {
+    put(c.name, String(d.name == null ? '' : d.name));
+    put(c.model, String(d.model == null ? '' : d.model));
+    put(c.link, String(d.link == null ? '' : d.link));
+    put(c.cost, String(d.cost == null ? '' : d.cost));
+    put(c.turns, String(d.turns == null ? '' : d.turns));
+    showGo(c);
+    showImage(c, typeof d.imageId === 'string' ? d.imageId : '');
+  }
+
+  function removeChar(id) {
+    var c = cards[id], old = c && c.imageId;
+    clearTimeout(timers[id]); delete pending[id];
+    if (colRef) colRef.doc(id).delete().catch(saveErr);
+    if (old && assetsNs) assetsNs.delete(old).catch(function () {});
+  }
+
+  /* ---------- 이미지 올리기 (파일 선택, 끌어다 놓기) ---------- */
+  function downscale(file) {
+    return new Promise(function (resolve) {
+      if (file.type === 'image/gif' || !window.createImageBitmap) return resolve(file);
+      createImageBitmap(file).then(function (bmp) {
+        var max = 900, w = bmp.width, h = bmp.height, k = Math.min(1, max / Math.max(w, h));
+        var cv = document.createElement('canvas');
+        cv.width = Math.max(1, Math.round(w * k)); cv.height = Math.max(1, Math.round(h * k));
+        cv.getContext('2d').drawImage(bmp, 0, 0, cv.width, cv.height);
+        cv.toBlob(function (b) { resolve(b && b.size < file.size ? b : file); }, 'image/webp', 0.86);
+      }).catch(function () { resolve(file); });
+    });
+  }
+  function uploadImage(id, c, file, report) {
+    function say(msg, isErr) { c.stat.textContent = isErr ? msg : ''; if (report) report(msg, isErr); }
+    if (!assetsNs) { say('이미지는 페이지 주인 계정에서만 올릴 수 있습니다.', true); return; }
+    say('', false);
+    if (report) report('올리는 중…', false);
+    c.thumb.classList.add('busy');
+    var oldId = c.imageId;
+    downscale(file).then(function (blob) { return assetsNs.upload(blob); }).then(function (res) {
+      return colRef.doc(id).update({ imageId: res.id }).then(function () {
+        if (chars[id]) chars[id].imageId = res.id;
+        showImage(c, res.id);
+        if (report) report('', false);
+        if (!modal.hidden) syncAdmin();
+        if (oldId && oldId !== res.id) assetsNs.delete(oldId).catch(function () {});
+      });
+    }).catch(function (e) {
+      var code = e && e.code;
+      say(
+        code === 'unsupported_type' ? 'PNG, JPG, WEBP, GIF 이미지만 올릴 수 있습니다.' :
+        code === 'too_large' ? '파일이 너무 큽니다.' :
+        code === 'quota_or_state' ? '이미지 저장 공간이 가득 찼습니다.' :
+        '이미지를 올리지 못했습니다. 다시 시도해 주세요.', true);
+    }).then(function () { c.thumb.classList.remove('busy'); });
+  }
+
+  /* ---------- 계산 ---------- */
+  function recalc() {
+    var turns = 0, n = 0, per = { '': { n: 0, t: 0, sum: 0 } };
+    Object.keys(tgData).forEach(function (s) { per[s] = { n: 0, t: 0, sum: 0 }; });
+    Object.keys(chars).forEach(function (id) {
+      var d = chars[id], s = groupOf(d), u = unitOf(s), t = num(d.turns), sub = num(d.cost) * t, p = per[s];
+      p.n += 1; p.t += t; p.sum += sub; turns += t; n += 1;
+      if (cards[id]) {
+        cards[id].sub.textContent = fmt(sub, u);
+        cards[id].lb.textContent = costLabel(u);
+      }
+    });
+
+    var rows = [], idx = {};
+    orderedSites().concat(['']).forEach(function (s) {
+      var p = per[s];
+      if (!p.n) return;
+      var u = unitOf(s);
+      if (!(u in idx)) { idx[u] = rows.length; rows.push({ u: u, sum: 0, t: 0, sites: [] }); }
+      var r = rows[idx[u]];
+      r.sum += p.sum; r.t += p.t;
+      r.sites.push(s ? siteLabel(s) : '미분류');
+    });
+    if (!rows.length) rows.push({ u: '', sum: 0, t: 0, sites: [] });
+    var g = $('grand');
+    g.textContent = '';
+    rows.forEach(function (r) {
+      var row = document.createElement('div'), main = document.createElement('div'), sub = document.createElement('div');
+      row.className = 'g-row'; main.className = 'g-main'; sub.className = 'g-sub';
+      main.appendChild(document.createTextNode(fmtNum(r.sum)));
+      if (r.u) {
+        var su = document.createElement('span');
+        su.className = 'u'; su.textContent = r.u; main.appendChild(su);
+      }
+      var parts = [];
+      if (r.sites.length) parts.push(r.sites.join(', '));
+      if (r.t) parts.push('총 ' + fmtNum(r.t) + '턴');
+      if (r.t) parts.push('턴당 평균 ' + fmt(r.sum / r.t, r.u));
+      if (!r.u && r.sites.length && rows.length > 1) parts.push('단위 미지정');
+      sub.textContent = parts.join(' · ');
+      row.appendChild(main);
+      if (parts.length) row.appendChild(sub);
+      g.appendChild(row);
+    });
+    $('sitecount').textContent = Object.keys(tgData).length.toLocaleString('ko-KR') + '곳';
+    $('count').textContent = n.toLocaleString('ko-KR') + '명';
+    $('turns').textContent = fmtNum(turns) + '턴';
+
+    Object.keys(per).forEach(function (s) {
+      var gr = s ? tgs[s] : ung;
+      if (!gr) return;
+      gr.count.textContent = per[s].n + '명 · ' + fmtNum(per[s].t) + '턴';
+      gr.sum.textContent = fmt(per[s].sum, unitOf(s));
+    });
+  }
+
+  /* ---------- 배치: 카드를 사이트별 격자에 나누고 검색을 적용 ---------- */
+  function layout() {
+    if (!sitesReady || !charsReady || !ung) return;
+    var q = $('search').value.trim().toLowerCase();
+    var gm = groupedMembers(), sids = gm.sids, box = $('sites');
+    sids.forEach(function (s, i) {
+      var el = tgs[s].el;
+      if (box.children[i] !== el) box.insertBefore(el, box.children[i] || null);
+    });
+    if (box.lastElementChild !== ung.el) box.appendChild(ung.el);
+
+    var visibleGroups = 0, anyChars = Object.keys(chars).length > 0;
+    sids.concat(['']).forEach(function (s, gi) {
+      var g = s ? tgs[s] : ung, ids = gm.members[s], shown = 0;
+      ids.forEach(function (id, i) {
+        var c = cards[id];
+        if (g.grid.children[i] !== c.el) g.grid.insertBefore(c.el, g.grid.children[i] || null);
+        var nm = String(chars[id].name || '').toLowerCase();
+        var show = !q || nm.indexOf(q) >= 0;
+        c.el.hidden = !show;
+        if (show) shown += 1;
+        fillSiteSelect(c.site, s);
+      });
+      var titleHit = !!(q && s && siteLabel(s).toLowerCase().indexOf(q) >= 0);
+      var hide = s
+        ? (q && !shown && !titleHit)
+        : ((!ids.length && sids.length > 0) || (q && !shown));
+      g.el.hidden = !!hide;
+      if (!hide) visibleGroups += 1;
+
+      var open = s ? tgData[s].open === true : ungOpen;
+      g.body.hidden = !(open || (q && shown > 0));
+      g.caret.setAttribute('aria-expanded', g.body.hidden ? 'false' : 'true');
+      if (g.text) {
+        if (g.body.hidden) g.body.removeAttribute('data-sz');
+        else if (g.body.getAttribute('data-sz') !== '1') { autosize(g.text); g.body.setAttribute('data-sz', '1'); }
+      }
+      if (s) {
+        g.up.disabled = gi === 0;
+        g.dn.disabled = gi === sids.length - 1;
+      }
+    });
+    $('empty').hidden = !(loaded && !sids.length && !anyChars);
+    $('nomatch').hidden = !(loaded && q && (anyChars || sids.length) && !visibleGroups);
+    recalc();
+  }
+
+  function onChars(snap) {
+    var docs = snap.docs, seen = {};
+    docs.forEach(function (d) {
+      seen[d.id] = true;
+      var data = Object.assign({}, d.data(), pending[d.id] || {});
+      chars[d.id] = data;
+      if (!cards[d.id]) { cards[d.id] = makeCard(d.id); }
+      fillCard(cards[d.id], data);
+    });
+    Object.keys(cards).forEach(function (id) {
+      if (!seen[id]) { cards[id].el.remove(); delete cards[id]; delete chars[id]; }
+    });
+    charsReady = true;
+    if (!snap.metadata.fromCache || docs.length) { loaded = true; clearTimeout(loadTimer); }
+    if (loaded) setStatus('');
+    layout();
+    if (focusNew && cards[focusNew] && !cards[focusNew].el.hidden) { cards[focusNew].name.focus(); focusNew = null; }
+    if (!modal.hidden) syncAdmin();
+  }
+
+  $('search').addEventListener('input', layout);
+
+  function addChar(sid, btn) {
+    if (!colRef) return;
+    btn.disabled = true;
+    if (sid) { if (tgData[sid] && tgData[sid].open !== true) tSet(sid, 'open', true); }
+    else {
+      ungOpen = true;
+      try { localStorage.setItem('ung-open', '1'); } catch (e) {}
+    }
+    colRef.add({ name: '', model: '', link: '', cost: '', turns: '', imageId: '', siteId: sid || '', order: Date.now() }).then(function (ref) {
+      focusNew = ref.id;
+      if (cards[ref.id] && !cards[ref.id].el.hidden) { cards[ref.id].name.focus(); focusNew = null; }
+    }).catch(saveErr).then(function () { btn.disabled = false; });
+  }
+
+  /* ---------- 사이트 저장 ---------- */
+  function tQueue(id, f, v) {
+    tPending[id] = tPending[id] || {};
+    tPending[id][f] = v;
+    clearTimeout(tTimers[id]);
+    tTimers[id] = setTimeout(function () { tFlush(id); }, 500);
+  }
+  function tFlush(id) {
+    if (!tgRef) return;
+    if (tInflight[id]) { tAgain[id] = true; return; }
+    var patch = Object.assign({}, tPending[id] || {});
+    if (!Object.keys(patch).length) return;
+    tInflight[id] = true;
+    tgRef.doc(id).update(patch).then(function () {
+      var p = tPending[id] || {};
+      Object.keys(patch).forEach(function (k) { if (p[k] === patch[k]) delete p[k]; });
+    }).catch(saveErr).then(function () {
+      tInflight[id] = false;
+      if (tAgain[id]) { tAgain[id] = false; tFlush(id); }
+    });
+  }
+  function tSet(id, f, v) {
+    if (!tgData[id]) return;
+    tgData[id][f] = v;
+    tQueue(id, f, v);
+  }
+
+  function moveSite(id, dir) {
+    var ids = orderedSites(), i = ids.indexOf(id), j = i + dir;
+    if (i < 0 || j < 0 || j >= ids.length) return;
+    var vals = ids.map(function (s) { return Number(tgData[s].order) || 0; }).sort(function (a, b) { return a - b; });
+    ids.splice(i, 1); ids.splice(j, 0, id);
+    ids.forEach(function (s, k) { if (Number(tgData[s].order) !== vals[k]) tSet(s, 'order', vals[k]); });
+    layout();
+    if (!modal.hidden) syncAdmin();
+  }
+  function deleteSite(id) {
+    clearTimeout(tTimers[id]); delete tPending[id];
+    Object.keys(chars).forEach(function (cid) { if (chars[cid].siteId === id) setField(cid, 'siteId', ''); });
+    if (tgRef) tgRef.doc(id).delete().catch(saveErr);
+    layout();
+  }
+  function addSite(btn, fromModal) {
+    if (!tgRef) return;
+    btn.disabled = true;
+    tgRef.add({ title: '', unit: '', body: '', open: true, order: Date.now() }).then(function (ref) {
+      if (fromModal) {
+        focusSiteRow = ref.id;
+        if (siteRows[ref.id]) { siteRows[ref.id].name.focus(); focusSiteRow = null; }
+      } else {
+        focusSite = ref.id;
+        if (tgs[ref.id]) { tgs[ref.id].title.focus(); focusSite = null; }
+      }
+    }).catch(saveErr).then(function () { btn.disabled = false; });
+  }
+
+  /* ---------- 사이트 그룹 (id가 빈 문자열이면 미분류) ---------- */
+  function makeGroup(id) {
+    var isU = !id, el = document.createElement('section');
+    el.className = 'site';
+    el.innerHTML =
+      '<div class="site-head"><button type="button" class="caret" aria-expanded="false" aria-label="펼치기 또는 접기"></button>' +
+      (isU
+        ? '<span class="site-static">미분류</span>'
+        : '<input class="tg-title" type="text" placeholder="사이트 이름 (예: 케이브덕)" aria-label="사이트 이름" autocomplete="off">') +
+      '<span class="site-meta"><span class="s-count">0명 · 0턴</span> · <b class="s-sum">0</b></span></div>' +
+      '<div class="site-body" hidden>' +
+      (isU ? '' :
+        '<label class="unitrow"><span class="lb">이 사이트에서 쓰는 단위</span><input class="s-unit" type="text" list="unit-list" placeholder="예: 윙, 리프" maxlength="12" autocomplete="off"></label>' +
+        '<textarea class="tg-text" placeholder="가격, 이름 부르는 방식 등 이 사이트의 규칙을 적어 두세요." aria-label="사이트 메모"></textarea>') +
+      '<div class="grid"></div>' +
+      '<div class="site-actions"><button type="button" class="btn ghost s-add">+ 캐릭터 추가</button>' +
+      (isU ? '' : '<button type="button" class="tag s-up" aria-label="사이트를 위로">▲ 위로</button><button type="button" class="tag s-dn" aria-label="사이트를 아래로">▼ 아래로</button><button type="button" class="del s-del">사이트 삭제</button>') +
+      '</div></div>';
+    var g = {
+      id: id, el: el,
+      caret: el.querySelector('.caret'),
+      title: el.querySelector('.tg-title'),
+      unit: el.querySelector('.s-unit'),
+      text: el.querySelector('.tg-text'),
+      body: el.querySelector('.site-body'),
+      grid: el.querySelector('.grid'),
+      count: el.querySelector('.s-count'),
+      sum: el.querySelector('.s-sum'),
+      add: el.querySelector('.s-add'),
+      up: el.querySelector('.s-up'),
+      dn: el.querySelector('.s-dn'),
+      del: el.querySelector('.s-del')
+    };
+    var uid = id || 'ung';
+    g.body.id = 's-body-' + uid; g.caret.id = 's-caret-' + uid; g.add.id = 's-add-' + uid;
+    g.caret.setAttribute('aria-controls', g.body.id);
+    if (g.title) { g.title.readOnly = true; g.title.tabIndex = -1; g.title.placeholder = '이름 없는 사이트'; }
+    if (g.unit) { g.unit.readOnly = true; g.unit.tabIndex = -1; }
+    if (g.text) { g.text.readOnly = true; g.text.tabIndex = -1; }
+    if (g.title) g.title.id = 'tg-title-' + id;
+    if (g.unit) g.unit.id = 'tg-unit-' + id;
+    if (g.text) g.text.id = 'tg-text-' + id;
+
+    g.caret.addEventListener('click', function () {
+      var willOpen = g.body.hidden;
+      if (isU) {
+        ungOpen = willOpen;
+        try { localStorage.setItem('ung-open', willOpen ? '1' : '0'); } catch (e) {}
+      } else { tSet(id, 'open', willOpen); }
+      layout();
+    });
+    g.add.addEventListener('click', function () { addChar(id, g.add); });
+    if (!isU) {
+      g.title.addEventListener('input', function () {
+        tSet(id, 'title', g.title.value);
+        layout();
+        if (!modal.hidden) syncAdmin();
+      });
+      g.unit.addEventListener('input', function () {
+        tSet(id, 'unit', g.unit.value);
+        layout();
+        if (!modal.hidden) syncAdmin();
+      });
+      g.text.addEventListener('input', function () { tSet(id, 'body', g.text.value); autosize(g.text); });
+      g.up.addEventListener('click', function () { moveSite(id, -1); });
+      g.dn.addEventListener('click', function () { moveSite(id, 1); });
+      var timer = null;
+      g.del.addEventListener('click', function () {
+        if (!g.del.classList.contains('arm')) {
+          g.del.classList.add('arm'); g.del.textContent = '한 번 더 누르면 삭제';
+          timer = setTimeout(function () { g.del.classList.remove('arm'); g.del.textContent = '사이트 삭제'; }, 3500);
+          return;
+        }
+        clearTimeout(timer);
+        deleteSite(id);
+      });
+    }
+    return g;
+  }
+  function fillSite(g, d) {
+    put(g.title, String(d.title == null ? '' : d.title));
+    put(g.unit, String(d.unit == null ? '' : d.unit));
+    put(g.text, String(d.body == null ? '' : d.body));
+    g.unit.parentNode.hidden = !String(d.unit == null ? '' : d.unit).trim();
+    g.text.hidden = !String(d.body == null ? '' : d.body).trim();
+    g.body.removeAttribute('data-sz');
+    if (!g.body.hidden && !g.text.hidden) autosize(g.text);
+  }
+  function onToggles(snap) {
+    var docs = snap.docs, seen = {};
+    docs.forEach(function (d) {
+      seen[d.id] = true;
+      tgData[d.id] = Object.assign({}, d.data(), tPending[d.id] || {});
+      if (!tgs[d.id]) tgs[d.id] = makeGroup(d.id);
+      fillSite(tgs[d.id], tgData[d.id]);
+    });
+    Object.keys(tgs).forEach(function (id) {
+      if (!seen[id]) { tgs[id].el.remove(); delete tgs[id]; delete tgData[id]; }
+    });
+    sitesReady = true;
+    $('tg-add').disabled = false;
+    $('s-new').disabled = false;
+    layout();
+    if (focusSite && tgs[focusSite]) { tgs[focusSite].title.focus(); focusSite = null; }
+    if (!modal.hidden) syncAdmin();
+  }
+  $('tg-add').addEventListener('click', function () { addSite($('tg-add'), false); });
+  $('s-new').addEventListener('click', function () { addSite($('s-new'), true); });
+
+  /* ---------- 설정 창 (사이트 관리 · 캐릭터 관리 · GitHub 토큰) ---------- */
+  var GH_KEY = 'gh-token';
+
+  function moveChar(id, dir) {
+    var gid = groupOf(chars[id]), ids = groupedMembers().members[gid].slice(), i = ids.indexOf(id), j = i + dir;
+    if (i < 0 || j < 0 || j >= ids.length) return;
+    var vals = ids.map(function (x) { return Number(chars[x].order) || 0; }).sort(function (a, b) { return a - b; });
+    ids.splice(i, 1); ids.splice(j, 0, id);
+    ids.forEach(function (x, k) { if (Number(chars[x].order) !== vals[k]) setField(x, 'order', vals[k]); });
+    layout(); syncAdmin();
+  }
+  function afterEdit(id) {
+    if (cards[id]) fillCard(cards[id], chars[id]);
+    layout();
+  }
+  function adminMsg(msg, isErr) {
+    var m = $('amsg');
+    m.textContent = msg || '';
+    m.className = 'ghmsg' + (isErr ? ' err' : '');
+  }
+
+  function makeSiteRow(id) {
+    var el = document.createElement('div');
+    el.className = 'srow';
+    el.innerHTML =
+      '<div class="amove"><button type="button" class="mv up" aria-label="위로">▲</button><button type="button" class="mv dn" aria-label="아래로">▼</button></div>' +
+      '<input class="s-name" type="text" placeholder="사이트 이름 (예: 케이브덕)" aria-label="사이트 이름" autocomplete="off">' +
+      '<input class="s-unitin" type="text" list="unit-list" placeholder="단위 (예: 윙)" maxlength="12" aria-label="단위" autocomplete="off">' +
+      '<button type="button" class="del sdel">삭제</button>' +
+      '<textarea class="s-memo" placeholder="메모 (가격, 이름 부르는 방식 등 이 사이트의 규칙)" aria-label="사이트 메모"></textarea>';
+    var r = {
+      el: el, up: el.querySelector('.up'), dn: el.querySelector('.dn'),
+      name: el.querySelector('.s-name'), unit: el.querySelector('.s-unitin'), del: el.querySelector('.sdel'),
+      memo: el.querySelector('.s-memo')
+    };
+    r.name.id = 'sr-name-' + id; r.unit.id = 'sr-unit-' + id; r.memo.id = 'sr-memo-' + id;
+    r.memo.addEventListener('input', function () {
+      if (!tgData[id]) return;
+      tSet(id, 'body', r.memo.value);
+      if (tgs[id]) fillSite(tgs[id], tgData[id]);
+      layout();
+    });
+    r.name.addEventListener('input', function () {
+      if (!tgData[id]) return;
+      tSet(id, 'title', r.name.value);
+      if (tgs[id]) fillSite(tgs[id], tgData[id]);
+      layout();
+    });
+    r.unit.addEventListener('input', function () {
+      if (!tgData[id]) return;
+      tSet(id, 'unit', r.unit.value);
+      if (tgs[id]) fillSite(tgs[id], tgData[id]);
+      layout(); syncChars();
+    });
+    r.up.addEventListener('click', function () { moveSite(id, -1); });
+    r.dn.addEventListener('click', function () { moveSite(id, 1); });
+    var t = null;
+    r.del.addEventListener('click', function () {
+      if (!r.del.classList.contains('arm')) {
+        r.del.classList.add('arm'); r.del.textContent = '한 번 더';
+        t = setTimeout(function () { r.del.classList.remove('arm'); r.del.textContent = '삭제'; }, 3500);
+        return;
+      }
+      clearTimeout(t);
+      deleteSite(id);
+    });
+    return r;
+  }
+  function syncSites() {
+    var sids = orderedSites(), box = $('slist');
+    Object.keys(siteRows).forEach(function (id) {
+      if (!tgData[id]) { siteRows[id].el.remove(); delete siteRows[id]; }
+    });
+    sids.forEach(function (id, i) {
+      var r = siteRows[id] || (siteRows[id] = makeSiteRow(id)), d = tgData[id];
+      put(r.name, String(d.title == null ? '' : d.title));
+      put(r.unit, String(d.unit == null ? '' : d.unit));
+      put(r.memo, String(d.body == null ? '' : d.body));
+      r.up.disabled = i === 0; r.dn.disabled = i === sids.length - 1;
+      if (box.children[i] !== r.el) box.insertBefore(r.el, box.children[i] || null);
+    });
+    $('sempty').hidden = sids.length > 0;
+    if (focusSiteRow && siteRows[focusSiteRow]) { siteRows[focusSiteRow].name.focus(); focusSiteRow = null; }
+  }
+
+  function makeAdminRow(id) {
+    var el = document.createElement('div');
+    el.className = 'arow';
+    el.innerHTML =
+      '<div class="amove"><button type="button" class="mv up" aria-label="위로">▲</button><button type="button" class="mv dn" aria-label="아래로">▼</button></div>' +
+      '<label class="athumb-wrap" title="이미지 파일 올리기"><img class="athumb" alt="" hidden><span class="athumb-ph" aria-hidden="true">＋</span>' +
+      '<input class="a-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" aria-label="이미지 파일 올리기">' +
+      '<button type="button" class="a-clr" hidden aria-label="이미지 지우기" title="이미지 지우기">×</button></label>' +
+      '<input class="a-name" type="text" placeholder="이름" aria-label="이름" autocomplete="off">' +
+      '<input class="a-model" type="text" placeholder="사용 모델" aria-label="사용 모델" autocomplete="off">' +
+      '<select class="a-site" aria-label="사이트"></select>' +
+      '<input class="a-cost n" type="text" inputmode="decimal" placeholder="한 턴 비용" aria-label="한 턴 비용" autocomplete="off">' +
+      '<input class="a-turns n" type="text" inputmode="numeric" placeholder="턴 수" aria-label="턴 수" autocomplete="off">' +
+      '<input class="a-link" type="text" placeholder="링크" aria-label="링크" inputmode="url" autocomplete="off">' +
+      '<button type="button" class="del adel">삭제</button>';
+    var r = {
+      el: el, up: el.querySelector('.up'), dn: el.querySelector('.dn'),
+      pic: el.querySelector('.athumb'), ph: el.querySelector('.athumb-ph'), file: el.querySelector('.a-file'),
+      name: el.querySelector('.a-name'), model: el.querySelector('.a-model'), site: el.querySelector('.a-site'),
+      cost: el.querySelector('.a-cost'), turns: el.querySelector('.a-turns'), link: el.querySelector('.a-link'),
+      del: el.querySelector('.adel'), clr: el.querySelector('.a-clr')
+    };
+    r.clr.addEventListener('click', function (e) {
+      e.preventDefault(); e.stopPropagation();
+      if (cards[id]) removeImage(id, cards[id]);
+    });
+    r.name.id = 'a-name-' + id; r.model.id = 'a-model-' + id; r.site.id = 'a-site-' + id; r.cost.id = 'a-cost-' + id;
+    r.turns.id = 'a-turns-' + id; r.link.id = 'a-link-' + id; r.file.id = 'a-file-' + id;
+    [['name', 'name'], ['model', 'model'], ['cost', 'cost'], ['turns', 'turns'], ['link', 'link']].forEach(function (p) {
+      r[p[0]].addEventListener('input', function () {
+        if (!chars[id]) return;
+        setField(id, p[1], r[p[0]].value);
+        afterEdit(id);
+      });
+    });
+    r.site.addEventListener('change', function () {
+      if (!chars[id]) return;
+      setField(id, 'siteId', r.site.value);
+      layout(); syncAdmin();
+    });
+    r.file.addEventListener('change', function () {
+      var f = r.file.files && r.file.files[0];
+      r.file.value = '';
+      if (f && cards[id]) uploadImage(id, cards[id], f, adminMsg);
+    });
+    r.pic.addEventListener('error', function () { r.pic.hidden = true; r.ph.hidden = false; });
+    r.up.addEventListener('click', function () { moveChar(id, -1); });
+    r.dn.addEventListener('click', function () { moveChar(id, 1); });
+    var t = null;
+    r.del.addEventListener('click', function () {
+      if (!r.del.classList.contains('arm')) {
+        r.del.classList.add('arm'); r.del.textContent = '한 번 더';
+        t = setTimeout(function () { r.del.classList.remove('arm'); r.del.textContent = '삭제'; }, 3500);
+        return;
+      }
+      clearTimeout(t);
+      removeChar(id);
+    });
+    return r;
+  }
+  function syncChars() {
+    var gm = groupedMembers(), box = $('alist'), flat = [];
+    gm.sids.concat(['']).forEach(function (s) {
+      var list = gm.members[s];
+      list.forEach(function (id, k) { flat.push({ id: id, s: s, k: k, len: list.length }); });
+    });
+    Object.keys(adminRows).forEach(function (id) {
+      if (!chars[id]) { adminRows[id].el.remove(); delete adminRows[id]; }
+    });
+    flat.forEach(function (f, i) {
+      var id = f.id, r = adminRows[id] || (adminRows[id] = makeAdminRow(id)), d = chars[id];
+      put(r.name, String(d.name == null ? '' : d.name));
+      put(r.model, String(d.model == null ? '' : d.model));
+      put(r.cost, String(d.cost == null ? '' : d.cost));
+      put(r.turns, String(d.turns == null ? '' : d.turns));
+      put(r.link, String(d.link == null ? '' : d.link));
+      fillSiteSelect(r.site, f.s);
+      r.cost.placeholder = costLabel(unitOf(f.s));
+      var img = typeof d.imageId === 'string' ? d.imageId : '';
+      if (img) {
+        var src = '/_blob/' + img;
+        if (r.pic.getAttribute('src') !== src) r.pic.setAttribute('src', src);
+        r.pic.hidden = false; r.ph.hidden = true;
+      } else { r.pic.removeAttribute('src'); r.pic.hidden = true; r.ph.hidden = false; }
+      r.clr.hidden = !img;
+      r.up.disabled = f.k === 0; r.dn.disabled = f.k === f.len - 1;
+      if (box.children[i] !== r.el) box.insertBefore(r.el, box.children[i] || null);
+    });
+    $('aempty').hidden = flat.length > 0;
+    if (focusAdmin && adminRows[focusAdmin]) {
+      adminRows[focusAdmin].name.focus();
+      adminRows[focusAdmin].el.scrollIntoView({ block: 'nearest' });
+      focusAdmin = null;
+    }
+  }
+  $('c-new').addEventListener('click', function () {
+    if (!colRef) return;
+    var btn = $('c-new');
+    btn.disabled = true;
+    colRef.add({ name: '', model: '', link: '', cost: '', turns: '', imageId: '', siteId: '', order: Date.now() }).then(function (ref) {
+      focusAdmin = ref.id;
+      if (adminRows[ref.id]) { adminRows[ref.id].name.focus(); focusAdmin = null; }
+    }).catch(saveErr).then(function () { btn.disabled = false; });
+  });
+  function syncAdmin() { syncSites(); syncChars(); }
+
+  function ghGet() { try { return localStorage.getItem(GH_KEY) || ''; } catch (e) { return ''; } }
+  function ghSet(v) {
+    try { if (v) localStorage.setItem(GH_KEY, v); else localStorage.removeItem(GH_KEY); return true; }
+    catch (e) { return false; }
+  }
+  function ghMsg(text, isErr) { var m = $('gh-state'); m.textContent = text; m.className = 'ghmsg' + (isErr ? ' err' : ''); }
+  function ghRender() {
+    var t = ghGet();
+    $('gh-token').value = ''; $('gh-token').type = 'password'; $('gh-show').textContent = '보기';
+    ghMsg(t ? '저장된 토큰이 있습니다 (끝 4자리 ' + t.slice(-4) + ').' : '저장된 토큰이 없습니다.');
+  }
+  $('gh-save').addEventListener('click', function () {
+    var v = $('gh-token').value.trim();
+    if (!v) { ghMsg('저장할 토큰을 먼저 붙여 넣어 주세요.', true); return; }
+    if (/\s/.test(v) || v.length < 20) { ghMsg('토큰 형식이 맞지 않습니다. 공백 없이 전체를 붙여 넣어 주세요.', true); return; }
+    if (!ghSet(v)) { ghMsg('이 브라우저에서는 저장할 수 없습니다. 개인정보 보호 창이거나 저장이 막혀 있습니다.', true); return; }
+    ghRender(); ghMsg('저장했습니다 (끝 4자리 ' + v.slice(-4) + ').');
+  });
+  $('gh-clear').addEventListener('click', function () {
+    if (!ghGet()) { ghMsg('지울 토큰이 없습니다.'); return; }
+    ghSet(''); ghRender(); ghMsg('저장된 토큰을 지웠습니다.');
+  });
+  $('gh-show').addEventListener('click', function () {
+    var f = $('gh-token'), hidden = f.type === 'password';
+    f.type = hidden ? 'text' : 'password';
+    $('gh-show').textContent = hidden ? '숨기기' : '보기';
+  });
+
+  function showTab(name) {
+    ['sites', 'chars', 'gh'].forEach(function (n) {
+      $('tab-' + n).setAttribute('aria-selected', n === name);
+      $('pane-' + n).hidden = n !== name;
+    });
+  }
+  $('tab-sites').addEventListener('click', function () { showTab('sites'); });
+  $('tab-chars').addEventListener('click', function () { showTab('chars'); });
+  $('tab-gh').addEventListener('click', function () { showTab('gh'); ghRender(); });
+
+  function openAdmin() {
+    lastFocus = document.activeElement;
+    modal.hidden = false;
+    document.body.style.overflow = 'hidden';
+    adminMsg('');
+    showTab('sites'); syncAdmin();
+    $('m-close').focus();
+  }
+  function closeAdmin() {
+    modal.hidden = true;
+    document.body.style.overflow = '';
+    $('gh-token').value = '';
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+  $('open-admin').addEventListener('click', openAdmin);
+  $('m-close').addEventListener('click', closeAdmin);
+  modal.addEventListener('mousedown', function (e) { if (e.target === modal) closeAdmin(); });
+  document.addEventListener('keydown', function (e) {
+    if (modal.hidden) return;
+    if (e.key === 'Escape') { closeAdmin(); return; }
+    if (e.key !== 'Tab') return;
+    var f = Array.prototype.filter.call(
+      modal.querySelectorAll('button, input, select, textarea, a[href]'),
+      function (x) { return !x.disabled && x.offsetParent !== null; }
+    );
+    if (!f.length) return;
+    var first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
+
+  /* ---------- 시작 ---------- */
+  ung = makeGroup('');
+  $('sites').appendChild(ung.el);
+  try { ungOpen = localStorage.getItem('ung-open') !== '0'; } catch (e) {}
+  recalc();
+  (async function () {
+    var db = null;
+    try { db = (window.claude && claude.use) ? await claude.use('db') : null; } catch (e) { db = null; }
+    try { assetsNs = (window.claude && claude.use) ? await claude.use('assets') : null; } catch (e) { assetsNs = null; }
+    if (!db) {
+      setStatus('저장 기능을 쓸 수 없는 화면입니다. claude.ai에서 이 페이지를 열어 주세요.', true);
+      $('empty').hidden = true;
+      return;
+    }
+    colRef = db.collection('characters');
+    tgRef = db.collection('toggles');
+    tgRef.orderBy('order').onSnapshot(onToggles, function () { sitesReady = true; layout(); });
+    loadTimer = setTimeout(function () {
+      if (!loaded) setStatus('저장된 내용을 아직 불러오지 못했습니다. 연결을 확인해 주세요.', true);
+    }, 10000);
+    colRef.orderBy('order').onSnapshot(onChars, function () {
+      setStatus('저장된 내용을 불러오지 못했습니다. 페이지를 다시 열어 주세요.', true);
+    });
+  })();
+</script>
+
+</body></html>
