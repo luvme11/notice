@@ -1,5 +1,16 @@
 {
- "characters": {},
+ "characters": {
+  "cmw7qybcirv0x": {
+   "name": "",
+   "model": "",
+   "link": "",
+   "cost": "",
+   "turns": "",
+   "imageId": "",
+   "siteId": "",
+   "order": 1794137179122
+  }
+ },
  "toggles": {
   "tmw7pdns7e1es": {
    "title": "Caveduck",
