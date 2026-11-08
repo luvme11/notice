@@ -315,6 +315,20 @@
   }
   .a-clr:hover { background: var(--danger); }
   .add-wrap { margin-top: 4px; }
+  .icon { overflow: hidden; }
+  .icon-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+  .swatch { width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--line); cursor: pointer; padding: 0; }
+  .swatch[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); }
+  .colorpick { display: inline-flex; align-items: center; gap: 8px; font-size: 0.92rem; }
+  .colorpick input { width: 44px; height: 36px; padding: 2px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); cursor: pointer; }
+  .look-sec { display: grid; gap: 10px; padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--line); }
+  .look-sec:last-of-type { border-bottom: 0; }
+  .look-sec h3 { margin: 0; font-size: 1rem; }
+  .iconset { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .icon-prev { position: relative; overflow: hidden; width: 72px; height: 72px; border-radius: 12px; border: 1px solid var(--line); display: grid; place-items: center; font-family: var(--font-num); font-size: 1.5rem; color: var(--accent); background: var(--bg); }
+  .icon-prev img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .filebtn { position: relative; display: inline-flex; align-items: center; }
 
   @media (max-width: 700px) {
     .srow { grid-template-columns: auto minmax(0, 1fr) auto; }
@@ -341,7 +355,7 @@
 
 <div class="cover" aria-hidden="true"></div>
 <main class="page">
-  <div class="icon" aria-hidden="true">Σ</div>
+  <div class="icon" id="icon-box" aria-hidden="true"><span id="icon-sigma">Σ</span><img id="icon-img" class="icon-img" alt="" hidden></div>
   <div class="titlerow">
     <h1>턴 비용 계산기</h1>
     <button class="gear" type="button" id="open-admin" aria-haspopup="dialog">⚙ 설정</button>
@@ -385,6 +399,7 @@
     <div class="mtabs" role="tablist" aria-label="설정 메뉴">
       <button type="button" role="tab" id="tab-sites" aria-selected="true" aria-controls="pane-sites">사이트 관리</button>
       <button type="button" role="tab" id="tab-chars" aria-selected="false" aria-controls="pane-chars">캐릭터 관리</button>
+      <button type="button" role="tab" id="tab-look" aria-selected="false" aria-controls="pane-look">화면</button>
       <button type="button" role="tab" id="tab-gh" aria-selected="false" aria-controls="pane-gh">GitHub 연결</button>
     </div>
 
@@ -401,6 +416,29 @@
       <div class="alist" id="alist"></div>
       <div class="empty" id="aempty" hidden>캐릭터가 아직 없습니다.</div>
       <div class="row-btns add-wrap"><button class="btn" type="button" id="c-new">+ 캐릭터 추가</button></div>
+    </section>
+
+    <section id="pane-look" role="tabpanel" aria-labelledby="tab-look" hidden>
+      <div class="look-sec">
+        <h3>상단 배경 색상</h3>
+        <div class="swatches" id="swatches" role="group" aria-label="색상 고르기"></div>
+        <div class="row-btns">
+          <label class="colorpick">직접 고르기 <input type="color" id="cover-color" value="#e3edfc" aria-label="상단 배경 색상 직접 고르기"></label>
+          <button class="btn ghost" type="button" id="cover-reset">기본색으로</button>
+        </div>
+      </div>
+      <div class="look-sec">
+        <h3>아이콘 이미지</h3>
+        <div class="iconset">
+          <div class="icon-prev" id="icon-prev"><span id="icon-prev-sigma">Σ</span><img id="icon-prev-img" alt="" hidden></div>
+          <div class="row-btns">
+            <label class="btn filebtn">이미지 올리기<input class="a-file" id="icon-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" aria-label="아이콘 이미지 올리기"></label>
+            <button class="btn ghost" type="button" id="icon-clear">기본 아이콘으로</button>
+          </div>
+        </div>
+        <p class="ghmsg" id="icon-msg" role="status" aria-live="polite"></p>
+        <p class="mnote">올린 이미지는 정사각형으로 잘려 아이콘 칸에 들어가고, 브라우저 탭 아이콘으로도 쓰입니다.</p>
+      </div>
     </section>
 
     <section id="pane-gh" role="tabpanel" aria-labelledby="tab-gh" hidden>
@@ -692,11 +730,11 @@
   }
 
   /* ---------- 이미지 올리기 (파일 선택, 끌어다 놓기) ---------- */
-  function downscale(file) {
+  function downscale(file, limit) {
     return new Promise(function (resolve) {
       if (file.type === 'image/gif' || !window.createImageBitmap) return resolve(file);
       createImageBitmap(file).then(function (bmp) {
-        var max = 900, w = bmp.width, h = bmp.height, k = Math.min(1, max / Math.max(w, h));
+        var max = limit || 900, w = bmp.width, h = bmp.height, k = Math.min(1, max / Math.max(w, h));
         var cv = document.createElement('canvas');
         cv.width = Math.max(1, Math.round(w * k)); cv.height = Math.max(1, Math.round(h * k));
         cv.getContext('2d').drawImage(bmp, 0, 0, cv.width, cv.height);
@@ -1223,7 +1261,7 @@
       if (adminRows[ref.id]) { adminRows[ref.id].name.focus(); focusAdmin = null; }
     }).catch(saveErr).then(function () { btn.disabled = false; });
   });
-  function syncAdmin() { syncSites(); syncChars(); }
+  function syncAdmin() { syncSites(); syncChars(); syncLook(); }
 
   var GH_REPO = 'gh-repo', GH_BRANCH = 'gh-branch';
   function lsGet(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
@@ -1277,20 +1315,21 @@
   });
 
   function showTab(name) {
-    ['sites', 'chars', 'gh'].forEach(function (n) {
+    ['sites', 'chars', 'look', 'gh'].forEach(function (n) {
       $('tab-' + n).setAttribute('aria-selected', n === name);
       $('pane-' + n).hidden = n !== name;
     });
   }
   $('tab-sites').addEventListener('click', function () { showTab('sites'); });
   $('tab-chars').addEventListener('click', function () { showTab('chars'); });
+  $('tab-look').addEventListener('click', function () { showTab('look'); syncLook(); });
   $('tab-gh').addEventListener('click', function () { showTab('gh'); ghRender(); });
 
   function openAdmin() {
     lastFocus = document.activeElement;
     modal.hidden = false;
     document.body.style.overflow = 'hidden';
-    adminMsg(''); $('mmsg').hidden = true;
+    adminMsg(''); iconMsg(''); $('mmsg').hidden = true;
     showTab('sites'); syncAdmin();
     $('m-close').focus();
   }
@@ -1315,6 +1354,76 @@
     var first = f[0], last = f[f.length - 1];
     if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
+
+  /* ---------- 화면 설정 (상단 배경색, 아이콘 이미지) ---------- */
+  var settings = {}, DEF_FAV = '', COVER_DEFAULT = '#e3edfc';
+  var COVER_PRESETS = ['#e3edfc', '#fde4ec', '#e3f4e6', '#fdf3d0', '#ece6fb', '#fde8d8', '#d8f0f0', '#e6e6e6'];
+  try { DEF_FAV = document.querySelector('link[rel="icon"]').href; } catch (e) {}
+  function applySettings() {
+    var cover = document.querySelector('.cover');
+    cover.style.background = settings.coverColor || '';
+    var src = settings.iconImage ? imgSrc(settings.iconImage) : '';
+    var img = $('icon-img'), sg = $('icon-sigma');
+    if (src) {
+      if (img.getAttribute('src') !== src) img.setAttribute('src', src);
+      img.hidden = false; sg.hidden = true;
+    } else {
+      img.removeAttribute('src'); img.hidden = true; sg.hidden = false;
+    }
+    var fav = src || DEF_FAV;
+    if (fav) Array.prototype.forEach.call(document.querySelectorAll('link[rel~="icon"]'), function (l) { if (l.getAttribute('href') !== fav) l.setAttribute('href', fav); });
+  }
+  $('icon-img').addEventListener('error', function () { $('icon-img').hidden = true; $('icon-sigma').hidden = false; });
+  function iconMsg(msg, isErr) { var m = $('icon-msg'); m.textContent = msg || ''; m.className = 'ghmsg' + (isErr ? ' err' : ''); }
+  function setLook(patch) {
+    var r = Store.settings.set(patch);
+    r.catch(saveErr);
+    return r;
+  }
+  function syncLook() {
+    var cur = (settings.coverColor || COVER_DEFAULT).toLowerCase();
+    var box = $('swatches');
+    if (!box.children.length) {
+      COVER_PRESETS.forEach(function (c) {
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'swatch'; b.style.background = c;
+        b.setAttribute('data-c', c); b.setAttribute('aria-label', '색상 ' + c);
+        b.addEventListener('click', function () { setLook({ coverColor: c === COVER_DEFAULT ? '' : c }); });
+        box.appendChild(b);
+      });
+    }
+    Array.prototype.forEach.call(box.children, function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-c') === cur ? 'true' : 'false'); });
+    if (document.activeElement !== $('cover-color') && $('cover-color').value !== cur) $('cover-color').value = /^#[0-9a-f]{6}$/.test(cur) ? cur : COVER_DEFAULT;
+    var src = settings.iconImage ? imgSrc(settings.iconImage) : '', pi = $('icon-prev-img');
+    if (src) { if (pi.getAttribute('src') !== src) pi.setAttribute('src', src); pi.hidden = false; $('icon-prev-sigma').hidden = true; }
+    else { pi.removeAttribute('src'); pi.hidden = true; $('icon-prev-sigma').hidden = false; }
+  }
+  $('cover-color').addEventListener('input', function () { setLook({ coverColor: $('cover-color').value }); });
+  $('cover-reset').addEventListener('click', function () { setLook({ coverColor: '' }); });
+  $('icon-file').addEventListener('change', function () {
+    var f = this.files && this.files[0];
+    this.value = '';
+    if (!f) return;
+    iconMsg('올리는 중…');
+    var old = settings.iconImage || '';
+    downscale(f, 256).then(function (blob) { return Store.assets.upload(blob); }).then(function (res) {
+      return Store.settings.set({ iconImage: res.id }).then(function () {
+        iconMsg('아이콘을 바꿨습니다.');
+        if (old && old !== res.id) Store.assets.delete(old).catch(function () {});
+      });
+    }).catch(function (e) {
+      saveErr(e);
+      iconMsg(e && e.code === 'unsupported_type' ? 'PNG, JPG, WEBP, GIF 이미지만 올릴 수 있습니다.' : '이미지를 올리지 못했습니다.', true);
+    });
+  });
+  $('icon-clear').addEventListener('click', function () {
+    var old = settings.iconImage || '';
+    if (!old) { iconMsg('이미 기본 아이콘입니다.'); return; }
+    Store.settings.set({ iconImage: '' }).then(function () {
+      iconMsg('기본 아이콘으로 돌렸습니다.');
+      Store.assets.delete(old).catch(function () {});
+    }).catch(function (e) { saveErr(e); iconMsg('바꾸지 못했습니다.', true); });
   });
 
   /* ---------- GitHub 저장소 저장소(Store): 데이터는 calc-data/data.json, 이미지는 calc-data/img/ ---------- */
@@ -1360,12 +1469,13 @@
   }
   function refreshImages() {
     Object.keys(cards).forEach(function (id) { showImage(cards[id], cards[id].imageId); });
+    applySettings();
     if (!modal.hidden) syncChars();
   }
 
   var Store = (function () {
-    var data = { characters: {}, toggles: {} }, sha = null, ready = false;
-    var subs = { characters: [], toggles: [] };
+    var data = { characters: {}, toggles: {}, settings: {} }, sha = null, ready = false;
+    var subs = { characters: [], toggles: [], settings: [] };
     var saveT = null, saving = false, again = false, waiters = [];
 
     function snap(name) {
@@ -1374,8 +1484,8 @@
       }).map(function (id) { return { id: id, data: function () { return Object.assign({}, data[name][id]); } }; });
       return { docs: docs, metadata: { fromCache: false } };
     }
-    function emit(name) { subs[name].forEach(function (l) { l.cb(snap(name)); }); }
-    function emitAll() { emit('toggles'); emit('characters'); }
+    function emit(name) { subs[name].forEach(function (l) { l.cb(name === 'settings' ? Object.assign({}, data.settings) : snap(name)); }); }
+    function emitAll() { emit('settings'); emit('toggles'); emit('characters'); }
     function check() {
       var cfg = ghCfg();
       if (!cfg.repo) return Promise.reject(codeErr('no_repo'));
@@ -1484,12 +1594,12 @@
 
     function load() {
       var cfg = ghCfg();
-      data = { characters: {}, toggles: {} }; sha = null;
+      data = { characters: {}, toggles: {}, settings: {} }; sha = null;
       if (!cfg.repo) { ready = true; emitAll(); return Promise.resolve(null); }
       return fetchData(cfg).then(function (r) {
         if (!r.missing) {
           sha = r.sha;
-          try { var j = JSON.parse(r.text || '{}'); data.characters = j.characters || {}; data.toggles = j.toggles || {}; } catch (e) { throw codeErr('bad_data'); }
+          try { var j = JSON.parse(r.text || '{}'); data.characters = j.characters || {}; data.toggles = j.toggles || {}; data.settings = j.settings || {}; } catch (e) { throw codeErr('bad_data'); }
         }
         ready = true; emitAll();
         return null;
@@ -1499,7 +1609,16 @@
         return e;
       });
     }
-    return { col: col, assets: assets, load: load };
+    var settingsApi = {
+      on: function (cb) { subs.settings.push({ cb: cb }); if (ready) cb(Object.assign({}, data.settings)); },
+      set: function (patch) {
+        var c = check(); if (c) return c;
+        Object.assign(data.settings, patch);
+        emit('settings');
+        return persist();
+      }
+    };
+    return { col: col, assets: assets, load: load, settings: settingsApi };
   })();
 
   function connMsg(e) {
@@ -1531,6 +1650,7 @@
       if (!loaded) setStatus('저장된 내용을 아직 불러오지 못했습니다. 연결을 확인해 주세요.', true);
     }, 10000);
     colRef.orderBy('order').onSnapshot(onChars, function () { charsReady = true; layout(); });
+    Store.settings.on(function (st) { settings = st || {}; applySettings(); if (!modal.hidden) syncLook(); });
     Store.load().then(connStatus);
   })();
 </script>
