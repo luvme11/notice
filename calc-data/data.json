@@ -614,7 +614,7 @@
    "title": "Caveduck @Kokori",
    "unit": "윙",
    "body": "",
-   "open": true,
+   "open": false,
    "order": 1794142761772,
    "folderId": "fmw7wo95quffs"
   },
@@ -622,7 +622,7 @@
    "title": "Caveduck @dabble_UU",
    "unit": "윙",
    "body": "",
-   "open": true,
+   "open": false,
    "order": 1794143116507,
    "folderId": "fmw7wo95quffs"
   },
@@ -630,7 +630,7 @@
    "title": "Caveduck @vanillamilk",
    "unit": "윙",
    "body": "",
-   "open": false,
+   "open": true,
    "order": 1794143729816,
    "folderId": "fmw7wo95quffs"
   },
