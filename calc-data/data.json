@@ -659,12 +659,12 @@
  "folders": {
   "fmw7wo95quffs": {
    "title": "Caveduck",
-   "open": false,
+   "open": true,
    "order": 1794146787421
   },
   "fmw7yqrqtm4e3": {
    "title": "Teapot",
-   "open": true,
+   "open": false,
    "order": 1794150264053
   }
  }
