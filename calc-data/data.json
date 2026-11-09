@@ -550,7 +550,7 @@
    "title": "Caveduck @T_Sawa",
    "unit": "윙",
    "body": "",
-   "open": true,
+   "open": false,
    "order": 1794140414961,
    "folderId": "fmw7wo95quffs"
   },
@@ -558,7 +558,7 @@
    "title": "Caveduck @hasookbum",
    "unit": "윙",
    "body": "",
-   "open": false,
+   "open": true,
    "order": 1794140755777,
    "folderId": "fmw7wo95quffs"
   },
