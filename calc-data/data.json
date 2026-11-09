@@ -574,7 +574,7 @@
    "title": "Caveduck @제작자비공",
    "unit": "",
    "body": "",
-   "open": false,
+   "open": true,
    "order": 1794134535847,
    "folderId": "fmw7wo95quffs"
   },
@@ -630,7 +630,7 @@
    "title": "Caveduck @vanillamilk",
    "unit": "윙",
    "body": "",
-   "open": true,
+   "open": false,
    "order": 1794143729816,
    "folderId": "fmw7wo95quffs"
   },
