@@ -523,12 +523,22 @@
   "cmwbtkfk9mhwj": {
    "name": "",
    "model": "",
-   "link": "",
+   "link": "https://teapotchat.com/character/hFREGp5Dhgc0yqFl44Gv",
    "cost": "",
    "turns": "",
    "imageId": "",
    "siteId": "tmw7yr9fxiojc",
    "order": 1794383434953
+  },
+  "cmwbtkvmdaxla": {
+   "name": "",
+   "model": "",
+   "link": "",
+   "cost": "",
+   "turns": "",
+   "imageId": "",
+   "siteId": "",
+   "order": 1794383455765
   }
  },
  "toggles": {
