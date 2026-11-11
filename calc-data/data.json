@@ -882,7 +882,7 @@
    "title": "Teapot @hearts",
    "unit": "리프",
    "body": "",
-   "open": true,
+   "open": false,
    "order": 1794384135309,
    "folderId": "fmw7yqrqtm4e3"
   },
@@ -890,7 +890,7 @@
    "title": "Teapot @MeomMeo",
    "unit": "리프",
    "body": "",
-   "open": true,
+   "open": false,
    "order": 1794384144726,
    "folderId": "fmw7yqrqtm4e3"
   },
