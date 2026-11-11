@@ -612,13 +612,23 @@
   },
   "cmwbttq6tjyu4": {
    "name": "내잘못아님",
-   "model": "",
+   "model": "Gemini 3.8 Flash (종량제)",
    "link": "https://teapotchat.com/character/JWs5CWfAEhQ7Pq1C2VXD",
    "cost": "",
    "turns": "",
    "imageId": "img-mwbtwtzp5dby.webp",
    "siteId": "tmwbtrv9f7d05",
    "order": 1794383868629
+  },
+  "cmwbtxeb5cvfd": {
+   "name": "",
+   "model": "",
+   "link": "",
+   "cost": "",
+   "turns": "",
+   "imageId": "",
+   "siteId": "",
+   "order": 1794384039857
   }
  },
  "toggles": {
