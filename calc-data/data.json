@@ -583,12 +583,22 @@
   "cmwbtt2twl3iw": {
    "name": "",
    "model": "",
-   "link": "",
+   "link": "https://teapotchat.com/character/CZTDhqmXVpuEMylb1RTZ",
    "cost": "",
    "turns": "",
    "imageId": "",
    "siteId": "tmwbtrv9f7d05",
    "order": 1794383838356
+  },
+  "cmwbttlw3acr1": {
+   "name": "",
+   "model": "",
+   "link": "",
+   "cost": "",
+   "turns": "",
+   "imageId": "",
+   "siteId": "",
+   "order": 1794383863059
   }
  },
  "toggles": {
