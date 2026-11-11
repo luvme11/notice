@@ -652,13 +652,23 @@
   },
   "cmwbtz4ooi9gn": {
    "name": "나인",
-   "model": "Gemini 4 Argon",
+   "model": "Gemini 4 Argon 종량제",
    "link": "https://teapotchat.com/character/immdKbvzgh3or5QRX8GC",
    "cost": "",
    "turns": "",
    "imageId": "img-mwbu0587gq7b.webp",
    "siteId": "tmwbtzfylpd5m",
    "order": 1794384120696
+  },
+  "cmwbu18xbi7yn": {
+   "name": "",
+   "model": "",
+   "link": "",
+   "cost": "",
+   "turns": "",
+   "imageId": "",
+   "siteId": "",
+   "order": 1794384219503
   }
  },
  "toggles": {
