@@ -898,7 +898,7 @@
    "title": "Teapot @Newcntry",
    "unit": "리프",
    "body": "",
-   "open": true,
+   "open": false,
    "order": 1794384506036,
    "folderId": "fmw7yqrqtm4e3"
   }
@@ -917,7 +917,7 @@
   },
   "fmw7yqrqtm4e3": {
    "title": "Teapot",
-   "open": false,
+   "open": true,
    "order": 1794150264053
   }
  }
